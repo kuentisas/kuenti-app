@@ -60,11 +60,11 @@ function LoginForm() {
           alt="Kuenti"
           width={160}
           height={102}
-          className="mx-auto mb-2 h-12 w-auto"
+          className="mx-auto mb-2 h-20 w-auto"
           priority
         />
         <CardTitle className="sr-only">Kuenti</CardTitle>
-        <CardDescription>Control de horas — inicia sesión</CardDescription>
+        <CardDescription>Control tiempos clientes — inicia sesión</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">

@@ -9,7 +9,7 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Kuenti | Time Tracking",
-  description: "Control de horas para Kuenti",
+  description: "Control tiempos clientes para Kuenti",
 };
 
 export default function RootLayout({

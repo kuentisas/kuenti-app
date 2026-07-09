@@ -56,7 +56,7 @@ export function AppShell({
             alt="Kuenti"
             width={160}
             height={102}
-            className="h-8 w-auto"
+            className="h-11 w-auto"
             priority
           />
         </div>
@@ -105,7 +105,7 @@ export function AppShell({
               alt="Kuenti"
               width={160}
               height={102}
-              className="h-7 w-auto"
+              className="h-9 w-auto"
             />
           </div>
           <div className="ml-auto flex items-center gap-3">
