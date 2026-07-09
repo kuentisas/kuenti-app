@@ -66,7 +66,7 @@ export default async function AdminDashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Colaboradoras activas hoy
+              Equipo activo hoy
             </CardTitle>
             <Users className="h-4 w-4 text-kuenti-slate" />
           </CardHeader>
@@ -118,7 +118,7 @@ export default async function AdminDashboardPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Colaboradora</TableHead>
+                <TableHead>Miembro</TableHead>
                 <TableHead>Cliente</TableHead>
                 <TableHead>Proceso</TableHead>
                 <TableHead>Desde</TableHead>

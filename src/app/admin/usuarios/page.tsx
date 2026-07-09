@@ -37,7 +37,7 @@ export default async function UsuariosPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-kuenti-slate">Colaboradoras</h1>
+          <h1 className="text-2xl font-semibold text-kuenti-slate">Equipo</h1>
           <p className="text-sm text-muted-foreground">
             Invita, desactiva, reactiva o elimina usuarios. El historial de horas se
             conserva siempre.
@@ -76,7 +76,7 @@ export default async function UsuariosPage() {
                     <TableCell className="text-muted-foreground">{u.email}</TableCell>
                     <TableCell>
                       <Badge variant={u.role === "admin" ? "default" : "secondary"}>
-                        {u.role === "admin" ? "Admin" : "Colaboradora"}
+                        {u.role === "admin" ? "Admin" : "Miembro"}
                       </Badge>
                     </TableCell>
                     <TableCell>

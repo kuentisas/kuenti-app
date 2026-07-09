@@ -86,7 +86,7 @@ export default async function ReportesPage({
       <div>
         <h1 className="text-2xl font-semibold text-kuenti-slate">Reportes</h1>
         <p className="text-sm text-muted-foreground">
-          Horas registradas por cliente y por colaboradora en el rango seleccionado.
+          Horas registradas por cliente y por miembro del equipo en el rango seleccionado.
         </p>
       </div>
 
@@ -95,7 +95,7 @@ export default async function ReportesPage({
       <Tabs defaultValue="cliente">
         <TabsList>
           <TabsTrigger value="cliente">Por cliente</TabsTrigger>
-          <TabsTrigger value="colaboradora">Por colaboradora</TabsTrigger>
+          <TabsTrigger value="colaboradora">Por miembro del equipo</TabsTrigger>
         </TabsList>
 
         <TabsContent value="cliente">
@@ -136,7 +136,7 @@ export default async function ReportesPage({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Colaboradora</TableHead>
+                    <TableHead>Miembro</TableHead>
                     <TableHead>Estado</TableHead>
                     <TableHead className="text-right">Horas totales</TableHead>
                   </TableRow>

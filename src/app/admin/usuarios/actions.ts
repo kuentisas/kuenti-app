@@ -131,7 +131,7 @@ export async function deleteUser(userId: string) {
 
 export async function reassignAllClients(fromUserId: string, toUserId: string) {
   if (fromUserId === toUserId) {
-    return { error: "Selecciona una colaboradora distinta como destino." };
+    return { error: "Selecciona un miembro del equipo distinto como destino." };
   }
 
   const supabase = createClient();

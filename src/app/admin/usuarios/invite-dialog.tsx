@@ -49,7 +49,7 @@ export function InviteDialog() {
       <DialogTrigger asChild>
         <Button className="gap-2">
           <UserPlus className="h-4 w-4" />
-          Invitar colaboradora
+          Invitar miembro
         </Button>
       </DialogTrigger>
       <DialogContent>
@@ -75,7 +75,7 @@ export function InviteDialog() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="colaboradora">Colaboradora</SelectItem>
+                <SelectItem value="colaboradora">Miembro del equipo</SelectItem>
                 <SelectItem value="admin">Admin (gerente)</SelectItem>
               </SelectContent>
             </Select>

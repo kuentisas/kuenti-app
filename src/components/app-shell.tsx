@@ -28,7 +28,7 @@ const ADMIN_NAV: NavItem[] = [
   { href: "/admin/reportes", label: "Reportes", icon: BarChart3 },
   { href: "/admin/rentabilidad", label: "Rentabilidad", icon: TrendingUp },
   { href: "/admin/clientes", label: "Clientes", icon: Building2 },
-  { href: "/admin/usuarios", label: "Colaboradoras", icon: Users },
+  { href: "/admin/usuarios", label: "Equipo", icon: Users },
 ];
 
 const COLABORADORA_NAV: NavItem[] = [

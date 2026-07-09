@@ -53,7 +53,7 @@ export function AssignmentEditor({
       <div className="space-y-2 rounded-md border p-3">
         {colaboradoras.length === 0 && (
           <p className="text-sm text-muted-foreground">
-            No hay colaboradoras registradas todavía.
+            No hay miembros del equipo registrados todavía.
           </p>
         )}
         {colaboradoras.map((colaboradora) => (

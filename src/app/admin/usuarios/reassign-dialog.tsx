@@ -72,14 +72,14 @@ export function ReassignDialog({
           <DialogTitle>Reasignar clientes de {fromUserNombre}</DialogTitle>
           <DialogDescription>
             Los {clientCount} cliente(s) asignados a {fromUserNombre} pasarán, en un solo
-            paso, a la colaboradora que elijas. Útil si se incapacita o deja el equipo.
+            paso, al miembro del equipo que elijas. Útil si se incapacita o se va.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-1.5">
           <Label>Reasignar a</Label>
           <Select value={toUserId} onValueChange={setToUserId}>
             <SelectTrigger>
-              <SelectValue placeholder="Selecciona una colaboradora" />
+              <SelectValue placeholder="Selecciona un miembro del equipo" />
             </SelectTrigger>
             <SelectContent>
               {otherColaboradoras.map((c) => (

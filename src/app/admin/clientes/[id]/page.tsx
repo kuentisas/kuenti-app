@@ -81,7 +81,7 @@ export default async function ClientDetailPage({
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Colaboradoras asignadas</CardTitle>
+            <CardTitle className="text-base">Equipo asignado</CardTitle>
           </CardHeader>
           <CardContent>
             <AssignmentEditor
