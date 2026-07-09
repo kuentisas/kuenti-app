@@ -1,0 +1,121 @@
+import { createClient } from "@/lib/supabase/server";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { InviteDialog } from "./invite-dialog";
+import { ReassignDialog } from "./reassign-dialog";
+import { UserStatusActions } from "./user-status-actions";
+
+export default async function UsuariosPage() {
+  const supabase = createClient();
+
+  const [{ data: users }, { data: assignments }] = await Promise.all([
+    supabase
+      .from("users")
+      .select("id, nombre, email, role, activo, deleted_at")
+      .order("nombre"),
+    supabase.from("client_assignments").select("user_id"),
+  ]);
+
+  const countByUser = new Map<string, number>();
+  for (const a of assignments ?? []) {
+    countByUser.set(a.user_id, (countByUser.get(a.user_id) ?? 0) + 1);
+  }
+
+  const allColaboradoras = (users ?? []).filter(
+    (u) => u.role === "colaboradora" && u.activo && !u.deleted_at
+  );
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-kuenti-slate">Colaboradoras</h1>
+          <p className="text-sm text-muted-foreground">
+            Invita, desactiva, reactiva o elimina usuarios. El historial de horas se
+            conserva siempre.
+          </p>
+        </div>
+        <InviteDialog />
+      </div>
+
+      <Card>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nombre</TableHead>
+                <TableHead>Correo</TableHead>
+                <TableHead>Rol</TableHead>
+                <TableHead>Estado</TableHead>
+                <TableHead className="text-right">Clientes asignados</TableHead>
+                <TableHead className="text-right">Acciones</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {(users ?? []).length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center text-muted-foreground">
+                    Aún no hay usuarios.
+                  </TableCell>
+                </TableRow>
+              )}
+              {(users ?? []).map((u) => {
+                const clientCount = countByUser.get(u.id) ?? 0;
+                const otherColaboradoras = allColaboradoras.filter((c) => c.id !== u.id);
+                return (
+                  <TableRow key={u.id}>
+                    <TableCell className="font-medium">{u.nombre}</TableCell>
+                    <TableCell className="text-muted-foreground">{u.email}</TableCell>
+                    <TableCell>
+                      <Badge variant={u.role === "admin" ? "default" : "secondary"}>
+                        {u.role === "admin" ? "Admin" : "Colaboradora"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {u.deleted_at ? (
+                        <Badge variant="destructive">Eliminada</Badge>
+                      ) : u.activo ? (
+                        <Badge variant="success">Activa</Badge>
+                      ) : (
+                        <Badge variant="secondary">Inactiva</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        {clientCount}
+                        {u.role === "colaboradora" && !u.deleted_at && (
+                          <ReassignDialog
+                            fromUserId={u.id}
+                            fromUserNombre={u.nombre}
+                            clientCount={clientCount}
+                            otherColaboradoras={otherColaboradoras}
+                          />
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <UserStatusActions
+                        userId={u.id}
+                        nombre={u.nombre}
+                        activo={u.activo}
+                        deleted={!!u.deleted_at}
+                      />
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
