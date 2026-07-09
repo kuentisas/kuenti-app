@@ -58,9 +58,9 @@ function LoginForm() {
         <Image
           src="/logo.png"
           alt="Kuenti"
-          width={160}
-          height={102}
-          className="mx-auto mb-2 h-20 w-auto"
+          width={548}
+          height={164}
+          className="mx-auto mb-2 h-14 w-auto"
           priority
         />
         <CardTitle className="sr-only">Kuenti</CardTitle>
