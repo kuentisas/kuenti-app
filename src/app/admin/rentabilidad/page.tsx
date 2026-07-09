@@ -26,9 +26,7 @@ interface ClientRow {
 
 function statusFor(costo: number, tarifa: number) {
   if (tarifa <= 0) {
-    return costo > 0
-      ? { label: "En pérdida", variant: "destructive" as const }
-      : { label: "Neutro", variant: "warning" as const };
+    return { label: "Sin tarifa configurada", variant: "secondary" as const };
   }
   const ratio = costo / tarifa;
   if (ratio >= 1) return { label: "En pérdida", variant: "destructive" as const };
@@ -164,7 +162,7 @@ export default async function RentabilidadPage({
                     {formatDurationShort(seconds)}
                   </TableCell>
                   <TableCell className="text-right font-mono">
-                    {formatCOP(client.tarifa_mensual)}
+                    {client.tarifa_mensual > 0 ? formatCOP(client.tarifa_mensual) : "—"}
                   </TableCell>
                   <TableCell className="text-right font-mono">{formatCOP(costo)}</TableCell>
                   <TableCell className="text-right font-mono">

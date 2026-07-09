@@ -60,7 +60,7 @@ export default async function ClientesPage() {
                   <TableCell className="font-medium">{client.nombre}</TableCell>
                   <TableCell className="text-muted-foreground">{client.nit ?? "—"}</TableCell>
                   <TableCell className="text-right font-mono">
-                    {formatCOP(client.tarifa_mensual)}
+                    {client.tarifa_mensual > 0 ? formatCOP(client.tarifa_mensual) : "—"}
                   </TableCell>
                   <TableCell>
                     <ActivoSwitch clientId={client.id} activo={client.activo} />

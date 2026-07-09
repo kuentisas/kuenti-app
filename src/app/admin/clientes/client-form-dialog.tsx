@@ -80,15 +80,15 @@ export function ClientFormDialog({ mode, client }: ClientFormDialogProps) {
             <Input id="nit" name="nit" defaultValue={client?.nit ?? ""} placeholder="900.123.456-7" />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="tarifa_mensual">Tarifa mensual (COP)</Label>
+            <Label htmlFor="tarifa_mensual">Tarifa mensual (COP, opcional)</Label>
             <Input
               id="tarifa_mensual"
               name="tarifa_mensual"
               type="number"
               min="0"
               step="1000"
-              required
-              defaultValue={client?.tarifa_mensual}
+              placeholder="Sin definir"
+              defaultValue={client?.tarifa_mensual || undefined}
             />
           </div>
           <DialogFooter>
