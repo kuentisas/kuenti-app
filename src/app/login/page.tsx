@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 
@@ -54,10 +55,15 @@ function LoginForm() {
   return (
     <Card className="w-full max-w-sm shadow-lg">
       <CardHeader className="space-y-1 text-center">
-        <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-xl bg-kuenti-slate text-lg font-bold text-white">
-          K
-        </div>
-        <CardTitle className="text-2xl text-kuenti-slate">Kuenti</CardTitle>
+        <Image
+          src="/logo.png"
+          alt="Kuenti"
+          width={160}
+          height={102}
+          className="mx-auto mb-2 h-12 w-auto"
+          priority
+        />
+        <CardTitle className="sr-only">Kuenti</CardTitle>
         <CardDescription>Control de horas — inicia sesión</CardDescription>
       </CardHeader>
       <CardContent>

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -49,13 +50,15 @@ export function AppShell({
   return (
     <div className="flex min-h-screen bg-kuenti-bg">
       <aside className="hidden w-60 shrink-0 flex-col border-r bg-white md:flex">
-        <div className="flex h-16 items-center gap-2 border-b px-5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-kuenti-slate text-sm font-bold text-white">
-            K
-          </div>
-          <span className="text-lg font-semibold text-kuenti-slate">
-            Kuenti
-          </span>
+        <div className="flex h-16 items-center border-b px-5">
+          <Image
+            src="/logo.png"
+            alt="Kuenti"
+            width={160}
+            height={102}
+            className="h-8 w-auto"
+            priority
+          />
         </div>
         <nav className="flex-1 space-y-1 p-3">
           {nav.map((item) => {
@@ -96,11 +99,14 @@ export function AppShell({
 
       <div className="flex flex-1 flex-col">
         <header className="flex h-16 items-center justify-between border-b bg-white px-4 md:px-8">
-          <div className="flex items-center gap-2 md:hidden">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-kuenti-slate text-sm font-bold text-white">
-              K
-            </div>
-            <span className="font-semibold text-kuenti-slate">Kuenti</span>
+          <div className="flex items-center md:hidden">
+            <Image
+              src="/logo.png"
+              alt="Kuenti"
+              width={160}
+              height={102}
+              className="h-7 w-auto"
+            />
           </div>
           <div className="ml-auto flex items-center gap-3">
             <span className="text-sm text-muted-foreground">{nombre}</span>
