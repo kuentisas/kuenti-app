@@ -20,21 +20,22 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useToast } from "@/components/ui/use-toast";
-import { startTimer, stopTimer } from "./actions";
+import { formatDurationShort } from "@/lib/format";
+import { startActivity, stopActivity } from "./actions";
 
 export interface AssignedClient {
   id: string;
   nombre: string;
-  processes: { id: string; nombre: string; activo: boolean }[];
+  activities: { id: string; nombre: string; activo: boolean }[];
 }
 
 export interface ActiveEntry {
   id: string;
   clientId: string;
-  processId: string;
+  activityId: string;
   startTime: string;
   clientNombre: string;
-  processNombre: string;
+  activityNombre: string;
 }
 
 export interface TodayEntry {
@@ -43,7 +44,7 @@ export interface TodayEntry {
   endTime: string | null;
   durationSeconds: number | null;
   clientNombre: string;
-  processNombre: string;
+  activityNombre: string;
 }
 
 function formatHMS(totalSeconds: number) {
@@ -71,7 +72,7 @@ export function TimerPanel({
 }) {
   const [activeEntry, setActiveEntry] = useState(initialActiveEntry);
   const [elapsed, setElapsed] = useState(0);
-  const [pendingProcessId, setPendingProcessId] = useState<string | null>(null);
+  const [pendingActivityId, setPendingActivityId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
 
@@ -95,31 +96,37 @@ export function TimerPanel({
     return todayEntries.reduce((sum, e) => sum + (e.durationSeconds ?? 0), 0);
   }, [todayEntries]);
 
-  function handleStart(clientId: string, clientNombre: string, processId: string, processNombre: string) {
-    setPendingProcessId(processId);
+  function handleStart(clientId: string, clientNombre: string, activityId: string, activityNombre: string) {
+    setPendingActivityId(activityId);
     startTransition(async () => {
-      const result = await startTimer(clientId, processId);
-      setPendingProcessId(null);
+      const result = await startActivity(clientId, activityId);
+      setPendingActivityId(null);
       if (result.error) {
         toast({ variant: "destructive", title: "No se pudo iniciar", description: result.error });
         return;
       }
+      if (result.autoStopped) {
+        toast({
+          title: "Se detuvo tu actividad anterior",
+          description: `${result.autoStopped.activity_nombre} · ${result.autoStopped.client_nombre} (${formatDurationShort(result.autoStopped.duration_seconds)})`,
+        });
+      }
       setActiveEntry({
         id: "optimistic",
         clientId,
-        processId,
+        activityId,
         startTime: new Date().toISOString(),
         clientNombre,
-        processNombre,
+        activityNombre,
       });
     });
   }
 
   function handleStop() {
-    setPendingProcessId(activeEntry?.processId ?? null);
+    setPendingActivityId(activeEntry?.activityId ?? null);
     startTransition(async () => {
-      const result = await stopTimer();
-      setPendingProcessId(null);
+      const result = await stopActivity();
+      setPendingActivityId(null);
       if (result.error) {
         toast({ variant: "destructive", title: "No se pudo detener", description: result.error });
         return;
@@ -145,7 +152,7 @@ export function TimerPanel({
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">
-                    {activeEntry.clientNombre} · {activeEntry.processNombre}
+                    {activeEntry.clientNombre} · {activeEntry.activityNombre}
                   </p>
                   <p className="font-mono text-3xl font-semibold tabular-nums text-kuenti-slate">
                     {formatHMS(elapsed)}
@@ -188,24 +195,24 @@ export function TimerPanel({
               <CardTitle className="text-base">{client.nombre}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              {client.processes.length === 0 && (
+              {client.activities.length === 0 && (
                 <p className="text-sm text-muted-foreground">
-                  Este cliente no tiene procesos configurados.
+                  Este cliente no tiene actividades configuradas.
                 </p>
               )}
-              {client.processes.map((process) => {
-                const isActiveProcess = activeEntry?.processId === process.id;
-                const isLoadingThis = isPending && pendingProcessId === process.id;
+              {client.activities.map((activity) => {
+                const isActiveActivity = activeEntry?.activityId === activity.id;
+                const isLoadingThis = isPending && pendingActivityId === activity.id;
                 return (
                   <div
-                    key={process.id}
+                    key={activity.id}
                     className={cn(
                       "flex items-center justify-between rounded-md border px-4 py-3",
-                      isActiveProcess && "border-accent bg-accent/5"
+                      isActiveActivity && "border-accent bg-accent/5"
                     )}
                   >
-                    <span className="text-sm font-medium">{process.nombre}</span>
-                    {isActiveProcess ? (
+                    <span className="text-sm font-medium">{activity.nombre}</span>
+                    {isActiveActivity ? (
                       <Button
                         size="sm"
                         variant="destructive"
@@ -225,7 +232,7 @@ export function TimerPanel({
                         size="sm"
                         variant="outline"
                         onClick={() =>
-                          handleStart(client.id, client.nombre, process.id, process.nombre)
+                          handleStart(client.id, client.nombre, activity.id, activity.nombre)
                         }
                         disabled={isPending}
                         className="gap-1.5"
@@ -259,7 +266,7 @@ export function TimerPanel({
               <TableHeader>
                 <TableRow>
                   <TableHead>Cliente</TableHead>
-                  <TableHead>Proceso</TableHead>
+                  <TableHead>Actividad</TableHead>
                   <TableHead>Inicio</TableHead>
                   <TableHead>Fin</TableHead>
                   <TableHead className="text-right">Duración</TableHead>
@@ -276,7 +283,7 @@ export function TimerPanel({
                 {todayEntries.map((entry) => (
                   <TableRow key={entry.id}>
                     <TableCell>{entry.clientNombre}</TableCell>
-                    <TableCell>{entry.processNombre}</TableCell>
+                    <TableCell>{entry.activityNombre}</TableCell>
                     <TableCell>{formatClock(entry.startTime)}</TableCell>
                     <TableCell>
                       {entry.endTime ? formatClock(entry.endTime) : "En curso"}

@@ -8,17 +8,17 @@ interface AssignmentRow {
     id: string;
     nombre: string;
     activo: boolean;
-    processes: { id: string; nombre: string; activo: boolean }[];
+    activities: { id: string; nombre: string; activo: boolean }[];
   } | null;
 }
 
 interface ActiveEntryRow {
   id: string;
   client_id: string;
-  process_id: string;
+  activity_id: string;
   start_time: string;
   clients: { nombre: string } | null;
-  processes: { nombre: string } | null;
+  activities: { nombre: string } | null;
 }
 
 interface TodayEntryRow {
@@ -27,7 +27,7 @@ interface TodayEntryRow {
   end_time: string | null;
   duration_seconds: number | null;
   clients: { nombre: string } | null;
-  processes: { nombre: string } | null;
+  activities: { nombre: string } | null;
 }
 
 export default async function PanelPage() {
@@ -40,7 +40,7 @@ export default async function PanelPage() {
 
   const { data: assignments } = await supabase
     .from("client_assignments")
-    .select("clients(id, nombre, activo, processes(id, nombre, activo))")
+    .select("clients(id, nombre, activo, activities(id, nombre, activo))")
     .eq("user_id", user.id);
 
   const clients: AssignedClient[] = (
@@ -50,13 +50,13 @@ export default async function PanelPage() {
       .map((c) => ({
         id: c.id,
         nombre: c.nombre,
-        processes: c.processes.filter((p) => p.activo),
+        activities: c.activities.filter((p) => p.activo),
       }))
   );
 
   const { data: activeEntryRaw } = await supabase
     .from("time_entries")
-    .select("id, client_id, process_id, start_time, clients(nombre), processes(nombre)")
+    .select("id, client_id, activity_id, start_time, clients(nombre), activities(nombre)")
     .eq("user_id", user.id)
     .is("end_time", null)
     .maybeSingle();
@@ -69,7 +69,7 @@ export default async function PanelPage() {
   const { data: todayEntriesRaw } = await supabase
     .from("time_entries")
     .select(
-      "id, start_time, end_time, duration_seconds, clients(nombre), processes(nombre)"
+      "id, start_time, end_time, duration_seconds, clients(nombre), activities(nombre)"
     )
     .eq("user_id", user.id)
     .gte("start_time", startOfDay.toISOString())
@@ -83,7 +83,7 @@ export default async function PanelPage() {
     endTime: e.end_time,
     durationSeconds: e.duration_seconds,
     clientNombre: e.clients?.nombre ?? "—",
-    processNombre: e.processes?.nombre ?? "—",
+    activityNombre: e.activities?.nombre ?? "—",
   }));
 
   return (
@@ -94,10 +94,10 @@ export default async function PanelPage() {
           ? {
               id: activeEntry.id,
               clientId: activeEntry.client_id,
-              processId: activeEntry.process_id,
+              activityId: activeEntry.activity_id,
               startTime: activeEntry.start_time,
               clientNombre: activeEntry.clients?.nombre ?? "—",
-              processNombre: activeEntry.processes?.nombre ?? "—",
+              activityNombre: activeEntry.activities?.nombre ?? "—",
             }
           : null
       }

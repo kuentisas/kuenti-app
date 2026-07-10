@@ -5,19 +5,19 @@ import { z } from "zod";
 
 import { createClient } from "@/lib/supabase/server";
 
-const processSchema = z.object({
+const activitySchema = z.object({
   nombre: z.string().trim().min(1, "El nombre es requerido"),
 });
 
 export async function createProcess(clientId: string, formData: FormData) {
-  const parsed = processSchema.safeParse({ nombre: formData.get("nombre") });
+  const parsed = activitySchema.safeParse({ nombre: formData.get("nombre") });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Datos inválidos" };
   }
 
   const supabase = createClient();
   const { error } = await supabase
-    .from("processes")
+    .from("activities")
     .insert({ client_id: clientId, nombre: parsed.data.nombre });
 
   if (error) return { error: error.message };
@@ -27,20 +27,20 @@ export async function createProcess(clientId: string, formData: FormData) {
 }
 
 export async function updateProcess(
-  processId: string,
+  activityId: string,
   clientId: string,
   formData: FormData
 ) {
-  const parsed = processSchema.safeParse({ nombre: formData.get("nombre") });
+  const parsed = activitySchema.safeParse({ nombre: formData.get("nombre") });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Datos inválidos" };
   }
 
   const supabase = createClient();
   const { error } = await supabase
-    .from("processes")
+    .from("activities")
     .update({ nombre: parsed.data.nombre })
-    .eq("id", processId);
+    .eq("id", activityId);
 
   if (error) return { error: error.message };
 
@@ -49,15 +49,15 @@ export async function updateProcess(
 }
 
 export async function toggleProcessActivo(
-  processId: string,
+  activityId: string,
   clientId: string,
   activo: boolean
 ) {
   const supabase = createClient();
   const { error } = await supabase
-    .from("processes")
+    .from("activities")
     .update({ activo })
-    .eq("id", processId);
+    .eq("id", activityId);
 
   if (error) return { error: error.message };
 

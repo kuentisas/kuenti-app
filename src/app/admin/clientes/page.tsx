@@ -17,10 +17,19 @@ import { ActivoSwitch } from "./activo-switch";
 
 export default async function ClientesPage() {
   const supabase = createClient();
-  const { data: clients } = await supabase
+  const { data: clientsRaw } = await supabase
     .from("clients")
-    .select("id, nombre, nit, tarifa_mensual, activo")
+    .select("id, nombre, nit, activo, client_rates(tarifa_mensual)")
     .order("nombre");
+
+  const clients = (clientsRaw ?? []).map((c) => ({
+    id: c.id,
+    nombre: c.nombre,
+    nit: c.nit,
+    activo: c.activo,
+    tarifa_mensual: (c.client_rates as unknown as { tarifa_mensual: number | null } | null)
+      ?.tarifa_mensual ?? 0,
+  }));
 
   return (
     <div className="space-y-6">

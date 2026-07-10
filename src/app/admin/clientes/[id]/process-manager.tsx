@@ -18,7 +18,7 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { createProcess, toggleProcessActivo, updateProcess } from "./actions";
 
-interface ProcessItem {
+interface ActivityItem {
   id: string;
   nombre: string;
   activo: boolean;
@@ -29,7 +29,7 @@ function EditProcessDialog({
   process,
 }: {
   clientId: string;
-  process: ProcessItem;
+  process: ActivityItem;
 }) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -56,7 +56,7 @@ function EditProcessDialog({
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Editar proceso</DialogTitle>
+          <DialogTitle>Editar actividad</DialogTitle>
         </DialogHeader>
         <form action={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
@@ -77,10 +77,10 @@ function EditProcessDialog({
 
 export function ProcessManager({
   clientId,
-  processes,
+  activities,
 }: {
   clientId: string;
-  processes: ProcessItem[];
+  activities: ActivityItem[];
 }) {
   const [isPending, startTransition] = useTransition();
   const [newName, setNewName] = useState("");
@@ -107,7 +107,7 @@ export function ProcessManager({
         <Input
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
-          placeholder="Nombre del proceso (ej. Nómina, IVA, Contabilidad)"
+          placeholder="Nombre de la actividad (ej. Nómina, IVA, Contabilidad)"
         />
         <Button type="submit" disabled={isPending} className="shrink-0 gap-2">
           <Plus className="h-4 w-4" />
@@ -116,27 +116,27 @@ export function ProcessManager({
       </form>
 
       <div className="divide-y rounded-md border">
-        {processes.length === 0 && (
+        {activities.length === 0 && (
           <p className="p-4 text-sm text-muted-foreground">
-            Este cliente no tiene procesos aún.
+            Este cliente no tiene actividades aún.
           </p>
         )}
-        {processes.map((process) => (
-          <div key={process.id} className="flex items-center justify-between px-4 py-3">
-            <span className="text-sm font-medium">{process.nombre}</span>
+        {activities.map((activity) => (
+          <div key={activity.id} className="flex items-center justify-between px-4 py-3">
+            <span className="text-sm font-medium">{activity.nombre}</span>
             <div className="flex items-center gap-3">
               <Switch
-                checked={process.activo}
+                checked={activity.activo}
                 onCheckedChange={(checked) => {
                   startTransition(async () => {
-                    const result = await toggleProcessActivo(process.id, clientId, checked);
+                    const result = await toggleProcessActivo(activity.id, clientId, checked);
                     if (result.error) {
                       toast({ variant: "destructive", title: "Error", description: result.error });
                     }
                   });
                 }}
               />
-              <EditProcessDialog clientId={clientId} process={process} />
+              <EditProcessDialog clientId={clientId} process={activity} />
             </div>
           </div>
         ))}

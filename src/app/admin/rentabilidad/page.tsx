@@ -53,7 +53,7 @@ export default async function RentabilidadPage({
     supabase.from("app_settings").select("costo_hora_promedio").eq("id", true).single(),
     supabase
       .from("clients")
-      .select("id, nombre, tarifa_mensual")
+      .select("id, nombre, client_rates(tarifa_mensual)")
       .eq("activo", true)
       .order("nombre"),
     supabase
@@ -65,7 +65,13 @@ export default async function RentabilidadPage({
   ]);
 
   const costoHoraPromedio = settings?.costo_hora_promedio ?? 0;
-  const clients = (clientsRaw ?? []) as ClientRow[];
+  const clients = ((clientsRaw ?? []) as unknown as (ClientRow & {
+    client_rates: { tarifa_mensual: number | null } | null;
+  })[]).map((c) => ({
+    id: c.id,
+    nombre: c.nombre,
+    tarifa_mensual: c.client_rates?.tarifa_mensual ?? 0,
+  }));
   const entries = (entriesRaw ?? []) as EntryRow[];
 
   const secondsByClient = new Map<string, number>();

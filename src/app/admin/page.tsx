@@ -20,7 +20,7 @@ interface ActiveTimerRow {
   start_time: string;
   users: { nombre: string } | null;
   clients: { nombre: string } | null;
-  processes: { nombre: string } | null;
+  activities: { nombre: string } | null;
 }
 
 export default async function AdminDashboardPage() {
@@ -42,7 +42,7 @@ export default async function AdminDashboardPage() {
 
   const { data: activeTimersRaw } = await supabase
     .from("time_entries")
-    .select("id, start_time, users(nombre), clients(nombre), processes(nombre)")
+    .select("id, start_time, users(nombre), clients(nombre), activities(nombre)")
     .is("end_time", null)
     .order("start_time", { ascending: true });
 
@@ -140,7 +140,7 @@ export default async function AdminDashboardPage() {
                   </TableCell>
                   <TableCell>{timer.clients?.nombre ?? "—"}</TableCell>
                   <TableCell>
-                    <Badge variant="secondary">{timer.processes?.nombre ?? "—"}</Badge>
+                    <Badge variant="secondary">{timer.activities?.nombre ?? "—"}</Badge>
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {new Date(timer.start_time).toLocaleTimeString("es-CO", {

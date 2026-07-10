@@ -16,18 +16,28 @@ export default async function ClientDetailPage({
 }) {
   const supabase = createClient();
 
-  const { data: client } = await supabase
+  const { data: clientRaw } = await supabase
     .from("clients")
-    .select("id, nombre, nit, tarifa_mensual, activo")
+    .select("id, nombre, nit, activo, client_rates(tarifa_mensual)")
     .eq("id", params.id)
     .single();
 
-  if (!client) notFound();
+  if (!clientRaw) notFound();
 
-  const [{ data: processes }, { data: assignments }, { data: colaboradoras }] =
+  const client = {
+    id: clientRaw.id,
+    nombre: clientRaw.nombre,
+    nit: clientRaw.nit,
+    activo: clientRaw.activo,
+    tarifa_mensual:
+      (clientRaw.client_rates as unknown as { tarifa_mensual: number | null } | null)
+        ?.tarifa_mensual ?? 0,
+  };
+
+  const [{ data: activities }, { data: assignments }, { data: colaboradoras }] =
     await Promise.all([
       supabase
-        .from("processes")
+        .from("activities")
         .select("id, nombre, activo")
         .eq("client_id", params.id)
         .order("nombre"),
@@ -72,10 +82,10 @@ export default async function ClientDetailPage({
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Procesos</CardTitle>
+            <CardTitle className="text-base">Actividades</CardTitle>
           </CardHeader>
           <CardContent>
-            <ProcessManager clientId={client.id} processes={processes ?? []} />
+            <ProcessManager clientId={client.id} activities={activities ?? []} />
           </CardContent>
         </Card>
 
