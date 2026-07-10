@@ -55,8 +55,8 @@ export function SalaryDialog({
         <DialogHeader>
           <DialogTitle>Salario de {nombre}</DialogTitle>
           <DialogDescription>
-            Solo vos como admin podés ver o editar este dato — nunca es visible para la
-            colaboradora, ni siquiera el propio (protegido por RLS a nivel de base de datos).
+            Solo el admin puede ver o editar este dato — nunca es visible para el miembro del
+            equipo, ni siquiera el propio (protegido por RLS a nivel de base de datos).
           </DialogDescription>
         </DialogHeader>
         <form action={handleSubmit} className="space-y-4">

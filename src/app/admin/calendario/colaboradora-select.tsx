@@ -29,7 +29,7 @@ export function ColaboradoraSelect({
   return (
     <Select value={selectedId} onValueChange={handleChange}>
       <SelectTrigger className="w-56">
-        <SelectValue placeholder="Selecciona una colaboradora" />
+        <SelectValue placeholder="Selecciona un miembro del equipo" />
       </SelectTrigger>
       <SelectContent>
         {colaboradoras.map((c) => (

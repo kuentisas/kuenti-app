@@ -74,7 +74,7 @@ export default async function AdminCalendarioPage({
       <div>
         <h1 className="text-2xl font-semibold text-kuenti-slate">Calendario</h1>
         <p className="text-sm text-muted-foreground">
-          Qué trabajó cada colaboradora y en qué horario, día por día — {mesNombre}.
+          Qué trabajó cada miembro del equipo y en qué horario, día por día — {mesNombre}.
         </p>
       </div>
 
@@ -84,7 +84,7 @@ export default async function AdminCalendarioPage({
       </div>
 
       {!selectedId ? (
-        <p className="text-sm text-muted-foreground">No hay colaboradoras activas.</p>
+        <p className="text-sm text-muted-foreground">No hay miembros del equipo activos.</p>
       ) : (
         <MonthCalendar year={year} month={month} sessionsByDay={sessionsByDay} />
       )}
