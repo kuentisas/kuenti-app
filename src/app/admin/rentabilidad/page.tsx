@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { formatCOP, formatDurationShort, secondsToHours } from "@/lib/format";
-import { MonthForm } from "./month-form";
+import { MonthForm } from "@/components/month-form";
 import { SettingsForm } from "./settings-form";
 
 // 42h/semana × 52 semanas ÷ 12 meses ≈ 182h/mes. Constante fija (no
@@ -124,7 +124,7 @@ export default async function RentabilidadPage({
       </div>
 
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <MonthForm defaultMonth={mesStr} />
+        <MonthForm defaultMonth={mesStr} basePath="/admin/rentabilidad" />
         <SettingsForm initialValue={costoHoraPromedio} />
       </div>
 

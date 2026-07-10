@@ -1,0 +1,96 @@
+"use client";
+
+import { useState } from "react";
+import { ListTree } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { formatDurationShort } from "@/lib/format";
+
+export interface SessionEntry {
+  id: string;
+  startTime: string;
+  endTime: string | null;
+  durationSeconds: number;
+}
+
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString("es-CO", { day: "numeric", month: "short" });
+}
+
+function formatClock(iso: string) {
+  return new Date(iso).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
+}
+
+export function ActivityDetailDialog({
+  activityNombre,
+  clientNombre,
+  totalSeconds,
+  sessions,
+}: {
+  activityNombre: string;
+  clientNombre: string;
+  totalSeconds: number;
+  sessions: SessionEntry[];
+}) {
+  const [open, setOpen] = useState(false);
+  // Más recientes primero.
+  const sorted = [...sessions].sort(
+    (a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
+  );
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="icon" className="h-7 w-7">
+          <ListTree className="h-3.5 w-3.5" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{activityNombre}</DialogTitle>
+          <DialogDescription>
+            {clientNombre} — total del mes: {formatDurationShort(totalSeconds)}
+          </DialogDescription>
+        </DialogHeader>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Fecha</TableHead>
+              <TableHead>Horario</TableHead>
+              <TableHead className="text-right">Duración</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {sorted.map((s) => (
+              <TableRow key={s.id}>
+                <TableCell>{formatDate(s.startTime)}</TableCell>
+                <TableCell className="text-muted-foreground">
+                  {formatClock(s.startTime)} – {s.endTime ? formatClock(s.endTime) : "en curso"}
+                </TableCell>
+                <TableCell className="text-right font-mono">
+                  {formatDurationShort(s.durationSeconds)}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </DialogContent>
+    </Dialog>
+  );
+}

@@ -107,6 +107,13 @@ export default async function PanelPage() {
     activityNombre: e.activities?.nombre ?? "—",
   }));
 
+  // Regla de recuperación de timer huérfano: si pasaron más de 5 minutos
+  // desde start_time, se le exige a la colaboradora resolver el modal
+  // obligatorio antes de poder usar el panel — calculado server-side, en
+  // el momento exacto de esta carga, para no depender del reloj del
+  // navegador.
+  const isStale = !!activeEntry && Date.now() - new Date(activeEntry.start_time).getTime() > 5 * 60 * 1000;
+
   return (
     <TimerPanel
       clients={clients}
@@ -123,6 +130,7 @@ export default async function PanelPage() {
           : null
       }
       todayEntries={todayEntries}
+      initialIsStale={isStale}
     />
   );
 }

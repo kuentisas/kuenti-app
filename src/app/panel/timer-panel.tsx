@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { Play, Square, Clock3, Loader2, WifiOff } from "lucide-react";
+import { Play, Square, Clock3, Loader2, WifiOff, AlertTriangle } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,10 @@ import { formatDurationShort } from "@/lib/format";
 import { startActivity, stopActivity } from "./actions";
 import { SuggestActivityDialog } from "./suggest-activity-dialog";
 import { RequestCorrectionDialog } from "./request-correction-dialog";
+import { AdjustTimeDialog } from "./adjust-time-dialog";
+import { StaleTimerModal } from "./stale-timer-modal";
+
+const DOS_HORAS_SEGUNDOS = 2 * 3600;
 
 export interface AssignedClient {
   id: string;
@@ -67,20 +71,26 @@ export function TimerPanel({
   clients,
   activeEntry: initialActiveEntry,
   todayEntries,
+  initialIsStale = false,
 }: {
   clients: AssignedClient[];
   activeEntry: ActiveEntry | null;
   todayEntries: TodayEntry[];
+  initialIsStale?: boolean;
 }) {
   const [activeEntry, setActiveEntry] = useState(initialActiveEntry);
   const [elapsed, setElapsed] = useState(0);
   const [pendingActivityId, setPendingActivityId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [isOnline, setIsOnline] = useState(true);
+  const [snoozedUntilSeconds, setSnoozedUntilSeconds] = useState(DOS_HORAS_SEGUNDOS);
+  const [adjustDialogOpen, setAdjustDialogOpen] = useState(false);
+  const [staleUnresolved, setStaleUnresolved] = useState(initialIsStale);
   const { toast } = useToast();
 
   useEffect(() => {
     setActiveEntry(initialActiveEntry);
+    setSnoozedUntilSeconds(DOS_HORAS_SEGUNDOS);
   }, [initialActiveEntry]);
 
   useEffect(() => {
@@ -134,6 +144,7 @@ export function TimerPanel({
         clientNombre,
         activityNombre,
       });
+      setSnoozedUntilSeconds(DOS_HORAS_SEGUNDOS);
     });
   }
 
@@ -147,6 +158,7 @@ export function TimerPanel({
         return;
       }
       setActiveEntry(null);
+      setSnoozedUntilSeconds(DOS_HORAS_SEGUNDOS);
     });
   }
 
@@ -159,6 +171,50 @@ export function TimerPanel({
           vuelve a estar disponible al reconectar.
         </div>
       )}
+
+      {activeEntry && staleUnresolved && (
+        <StaleTimerModal
+          entry={activeEntry}
+          elapsedSeconds={elapsed}
+          onResolved={() => {
+            setStaleUnresolved(false);
+            setActiveEntry(null);
+          }}
+        />
+      )}
+
+      {activeEntry && !staleUnresolved && elapsed >= snoozedUntilSeconds && (
+        <div className="flex flex-col gap-3 rounded-md border border-warning bg-warning/10 px-4 py-3 text-sm text-warning-foreground sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            ¿Sigues en {activeEntry.activityNombre}? Llevas {formatHMS(elapsed)} activo.
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setSnoozedUntilSeconds((s) => s + 3600)}
+            >
+              Sí, continuar
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setAdjustDialogOpen(true)}>
+              Ajustar hora real
+            </Button>
+            <Button size="sm" variant="destructive" onClick={handleStop} disabled={isPending}>
+              Detener ahora
+            </Button>
+          </div>
+        </div>
+      )}
+
+      <AdjustTimeDialog
+        open={adjustDialogOpen}
+        onOpenChange={setAdjustDialogOpen}
+        onResolved={() => {
+          setAdjustDialogOpen(false);
+          setActiveEntry(null);
+        }}
+      />
       <Card
         className={cn(
           "sticky top-0 z-10 border-2",
@@ -185,7 +241,7 @@ export function TimerPanel({
                 size="lg"
                 variant="destructive"
                 onClick={handleStop}
-                disabled={isPending || !isOnline}
+                disabled={isPending || !isOnline || staleUnresolved}
                 className="gap-2"
               >
                 {isPending ? (
@@ -242,7 +298,7 @@ export function TimerPanel({
                         size="sm"
                         variant="destructive"
                         onClick={handleStop}
-                        disabled={isPending || !isOnline}
+                        disabled={isPending || !isOnline || staleUnresolved}
                         className="gap-1.5"
                       >
                         {isLoadingThis ? (
@@ -259,7 +315,7 @@ export function TimerPanel({
                         onClick={() =>
                           handleStart(client.id, client.nombre, activity.id, activity.nombre)
                         }
-                        disabled={isPending || !isOnline}
+                        disabled={isPending || !isOnline || staleUnresolved}
                         className="gap-1.5"
                       >
                         {isLoadingThis ? (

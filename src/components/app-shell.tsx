@@ -11,6 +11,8 @@ import {
   TrendingUp,
   LogOut,
   Clock,
+  CalendarRange,
+  CalendarDays,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -27,12 +29,15 @@ const ADMIN_NAV: NavItem[] = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/reportes", label: "Reportes", icon: BarChart3 },
   { href: "/admin/rentabilidad", label: "Rentabilidad", icon: TrendingUp },
+  { href: "/admin/calendario", label: "Calendario", icon: CalendarDays },
   { href: "/admin/clientes", label: "Clientes", icon: Building2 },
   { href: "/admin/usuarios", label: "Equipo", icon: Users },
 ];
 
 const COLABORADORA_NAV: NavItem[] = [
   { href: "/panel", label: "Mis clientes", icon: Clock },
+  { href: "/panel/resumen", label: "Resumen del mes", icon: CalendarRange },
+  { href: "/panel/calendario", label: "Calendario", icon: CalendarDays },
 ];
 
 export function AppShell({

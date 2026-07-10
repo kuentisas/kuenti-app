@@ -9,27 +9,36 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { formatCOP } from "@/lib/format";
 import { InviteDialog } from "./invite-dialog";
 import { ReassignDialog } from "./reassign-dialog";
 import { UserStatusActions } from "./user-status-actions";
+import { SalaryDialog } from "./salary-dialog";
 
 export default async function UsuariosPage() {
   const supabase = createClient();
 
-  const [{ data: users }, { data: assignments }] = await Promise.all([
+  const [{ data: usersRaw }, { data: assignments }] = await Promise.all([
     supabase
       .from("users")
-      .select("id, nombre, email, role, activo, deleted_at")
+      .select("id, nombre, email, role, activo, deleted_at, user_salaries(salario_mensual)")
       .order("nombre"),
     supabase.from("client_assignments").select("user_id"),
   ]);
+
+  const users = (usersRaw ?? []).map((u) => ({
+    ...u,
+    salario_mensual:
+      (u.user_salaries as unknown as { salario_mensual: number | null } | null)
+        ?.salario_mensual ?? null,
+  }));
 
   const countByUser = new Map<string, number>();
   for (const a of assignments ?? []) {
     countByUser.set(a.user_id, (countByUser.get(a.user_id) ?? 0) + 1);
   }
 
-  const allColaboradoras = (users ?? []).filter(
+  const allColaboradoras = users.filter(
     (u) => u.role === "colaboradora" && u.activo && !u.deleted_at
   );
 
@@ -55,19 +64,20 @@ export default async function UsuariosPage() {
                 <TableHead>Correo</TableHead>
                 <TableHead>Rol</TableHead>
                 <TableHead>Estado</TableHead>
+                <TableHead className="text-right">Salario</TableHead>
                 <TableHead className="text-right">Clientes asignados</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {(users ?? []).length === 0 && (
+              {users.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center text-muted-foreground">
                     Aún no hay usuarios.
                   </TableCell>
                 </TableRow>
               )}
-              {(users ?? []).map((u) => {
+              {users.map((u) => {
                 const clientCount = countByUser.get(u.id) ?? 0;
                 const otherColaboradoras = allColaboradoras.filter((c) => c.id !== u.id);
                 return (
@@ -86,6 +96,24 @@ export default async function UsuariosPage() {
                         <Badge variant="success">Activa</Badge>
                       ) : (
                         <Badge variant="secondary">Inactiva</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {u.role === "colaboradora" ? (
+                        <div className="flex items-center justify-end gap-1">
+                          <span className="font-mono text-sm">
+                            {u.salario_mensual != null ? formatCOP(u.salario_mensual) : "—"}
+                          </span>
+                          {!u.deleted_at && (
+                            <SalaryDialog
+                              userId={u.id}
+                              nombre={u.nombre}
+                              currentSalary={u.salario_mensual}
+                            />
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
                       )}
                     </TableCell>
                     <TableCell className="text-right">

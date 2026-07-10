@@ -8,7 +8,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-export function MonthForm({ defaultMonth }: { defaultMonth: string }) {
+export function MonthForm({
+  defaultMonth,
+  basePath,
+  extraParams,
+}: {
+  defaultMonth: string;
+  basePath: string;
+  extraParams?: Record<string, string>;
+}) {
   const router = useRouter();
   const [month, setMonth] = useState(defaultMonth);
 
@@ -16,7 +24,8 @@ export function MonthForm({ defaultMonth }: { defaultMonth: string }) {
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        router.push(`/admin/rentabilidad?mes=${month}`);
+        const params = new URLSearchParams({ mes: month, ...extraParams });
+        router.push(`${basePath}?${params.toString()}`);
       }}
       className="flex items-end gap-3"
     >

@@ -165,3 +165,30 @@ export async function reassignAllClients(fromUserId: string, toUserId: string) {
   revalidatePath("/admin/clientes");
   return { error: null, count: clientIds.length };
 }
+
+const salarySchema = z.object({
+  userId: z.string().uuid(),
+  salario: z.coerce.number().min(0, "El salario debe ser positivo"),
+});
+
+export async function updateUserSalary(userId: string, salario: number) {
+  const parsed = salarySchema.safeParse({ userId, salario });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Datos inválidos" };
+  }
+
+  const supabase = createClient();
+  // RLS: user_salaries es admin-only sin excepciones (Fase 1), así que este
+  // update ya está protegido a nivel de motor, no solo por estar en una
+  // página de /admin.
+  const { error } = await supabase
+    .from("user_salaries")
+    .update({ salario_mensual: parsed.data.salario })
+    .eq("user_id", parsed.data.userId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin/usuarios");
+  revalidatePath("/admin/rentabilidad");
+  return { error: null };
+}

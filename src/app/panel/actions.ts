@@ -94,3 +94,34 @@ export async function requestCorrection(
   revalidatePath("/panel");
   return { error: null };
 }
+
+const resolveStaleTimerSchema = z.object({
+  choice: z.enum(["seguido", "ajustado"]),
+  actualEndTime: z.string().optional(),
+  nota: z.string().trim().optional(),
+});
+
+export async function resolveStaleTimer(
+  choice: "seguido" | "ajustado",
+  actualEndTime?: string,
+  nota?: string
+) {
+  const parsed = resolveStaleTimerSchema.safeParse({ choice, actualEndTime, nota });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Datos inválidos" };
+  }
+
+  const supabase = createClient();
+  const { error } = await supabase.rpc("resolve_stale_timer", {
+    p_choice: parsed.data.choice,
+    p_actual_end_time: parsed.data.actualEndTime
+      ? new Date(parsed.data.actualEndTime).toISOString()
+      : null,
+    p_nota_ajuste: parsed.data.nota ?? null,
+  });
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/panel");
+  return { error: null };
+}
