@@ -8,7 +8,14 @@ interface AssignmentRow {
     id: string;
     nombre: string;
     activo: boolean;
-    activities: { id: string; nombre: string; activo: boolean }[];
+    activities: {
+      id: string;
+      nombre: string;
+      activo: boolean;
+      tipo: "recurrente" | "eventual";
+      mes_aplicable: string | null;
+      estado_aprobacion: "aprobada" | "pendiente" | "rechazada";
+    }[];
   } | null;
 }
 
@@ -40,9 +47,18 @@ export default async function PanelPage() {
 
   const { data: assignments } = await supabase
     .from("client_assignments")
-    .select("clients(id, nombre, activo, activities(id, nombre, activo))")
+    .select(
+      "clients(id, nombre, activo, activities(id, nombre, activo, tipo, mes_aplicable, estado_aprobacion))"
+    )
     .eq("user_id", user.id);
 
+  const currentMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}-01`;
+
+  // Además de activo, una actividad solo es utilizable (aparece con botón
+  // Start) si está aprobada y, si es eventual, si corresponde al mes
+  // actual. RLS ya deja ver la fila si la sugirió la propia colaboradora
+  // (para que pueda ver que está "pendiente"), así que este filtro es el
+  // que realmente decide si aparece como opción para iniciar timer.
   const clients: AssignedClient[] = (
     ((assignments ?? []) as unknown as AssignmentRow[])
       .map((a) => a.clients)
@@ -50,7 +66,12 @@ export default async function PanelPage() {
       .map((c) => ({
         id: c.id,
         nombre: c.nombre,
-        activities: c.activities.filter((p) => p.activo),
+        activities: c.activities.filter(
+          (p) =>
+            p.activo &&
+            p.estado_aprobacion === "aprobada" &&
+            (p.tipo === "recurrente" || p.mes_aplicable === currentMonth)
+        ),
       }))
   );
 

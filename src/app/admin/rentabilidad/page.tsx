@@ -13,9 +13,14 @@ import { formatCOP, formatDurationShort, secondsToHours } from "@/lib/format";
 import { MonthForm } from "./month-form";
 import { SettingsForm } from "./settings-form";
 
+// 42h/semana × 52 semanas ÷ 12 meses ≈ 182h/mes. Constante fija (no
+// prorrateada por días del mes) — decisión ya confirmada.
+const HORAS_MES = (42 * 52) / 12;
+
 interface EntryRow {
   duration_seconds: number | null;
   client_id: string;
+  user_id: string;
 }
 
 interface ClientRow {
@@ -49,20 +54,22 @@ export default async function RentabilidadPage({
 
   const supabase = createClient();
 
-  const [{ data: settings }, { data: clientsRaw }, { data: entriesRaw }] = await Promise.all([
-    supabase.from("app_settings").select("costo_hora_promedio").eq("id", true).single(),
-    supabase
-      .from("clients")
-      .select("id, nombre, client_rates(tarifa_mensual)")
-      .eq("activo", true)
-      .order("nombre"),
-    supabase
-      .from("time_entries")
-      .select("duration_seconds, client_id")
-      .gte("start_time", monthStart.toISOString())
-      .lte("start_time", monthEnd.toISOString())
-      .not("duration_seconds", "is", null),
-  ]);
+  const [{ data: settings }, { data: clientsRaw }, { data: entriesRaw }, { data: salariesRaw }] =
+    await Promise.all([
+      supabase.from("app_settings").select("costo_hora_promedio").eq("id", true).single(),
+      supabase
+        .from("clients")
+        .select("id, nombre, client_rates(tarifa_mensual)")
+        .eq("activo", true)
+        .order("nombre"),
+      supabase
+        .from("time_entries")
+        .select("duration_seconds, client_id, user_id")
+        .gte("start_time", monthStart.toISOString())
+        .lte("start_time", monthEnd.toISOString())
+        .not("duration_seconds", "is", null),
+      supabase.from("user_salaries").select("user_id, salario_mensual"),
+    ]);
 
   const costoHoraPromedio = settings?.costo_hora_promedio ?? 0;
   const clients = ((clientsRaw ?? []) as unknown as (ClientRow & {
@@ -74,18 +81,32 @@ export default async function RentabilidadPage({
   }));
   const entries = (entriesRaw ?? []) as EntryRow[];
 
+  // Costo/hora real por colaboradora = salario_mensual ÷ 182h. Si no tiene
+  // salario cargado todavía, cae al costo_hora_promedio global (fallback
+  // ya confirmado, para no romper rentabilidad mientras se cargan salarios
+  // gradualmente).
+  const costoHoraByUser = new Map<string, number>();
+  for (const s of salariesRaw ?? []) {
+    if (s.salario_mensual != null) {
+      costoHoraByUser.set(s.user_id, s.salario_mensual / HORAS_MES);
+    }
+  }
+
   const secondsByClient = new Map<string, number>();
+  const costoByClient = new Map<string, number>();
   for (const e of entries) {
-    secondsByClient.set(
-      e.client_id,
-      (secondsByClient.get(e.client_id) ?? 0) + (e.duration_seconds ?? 0)
-    );
+    const seconds = e.duration_seconds ?? 0;
+    secondsByClient.set(e.client_id, (secondsByClient.get(e.client_id) ?? 0) + seconds);
+
+    const costoHora = costoHoraByUser.get(e.user_id) ?? costoHoraPromedio;
+    const costo = secondsToHours(seconds) * costoHora;
+    costoByClient.set(e.client_id, (costoByClient.get(e.client_id) ?? 0) + costo);
   }
 
   const rows = clients.map((client) => {
     const seconds = secondsByClient.get(client.id) ?? 0;
     const horas = secondsToHours(seconds);
-    const costo = horas * costoHoraPromedio;
+    const costo = costoByClient.get(client.id) ?? 0;
     const status = statusFor(costo, client.tarifa_mensual);
     return { client, seconds, horas, costo, status };
   });

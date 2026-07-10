@@ -1,4 +1,4 @@
-import { Users, Clock, Activity } from "lucide-react";
+import { Users, Clock, Activity, Lightbulb, Pencil, AlertTriangle } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,10 +14,44 @@ import { Badge } from "@/components/ui/badge";
 import { LiveDuration } from "@/components/live-duration";
 import { RealtimeRefresher } from "@/components/realtime-refresher";
 import { formatDurationShort } from "@/lib/format";
+import { ActivityApprovalActions } from "./activity-approval-actions";
+import { CorrectionApprovalActions } from "./correction-approval-actions";
 
 interface ActiveTimerRow {
   id: string;
   start_time: string;
+  users: { nombre: string } | null;
+  clients: { nombre: string } | null;
+  activities: { nombre: string } | null;
+}
+
+interface PendingActivityRow {
+  id: string;
+  nombre: string;
+  motivo: string | null;
+  created_at: string;
+  clients: { nombre: string } | null;
+  users: { nombre: string } | null;
+}
+
+interface PendingCorrectionRow {
+  id: string;
+  motivo: string;
+  nueva_hora_fin_sugerida: string;
+  created_at: string;
+  users: { nombre: string } | null;
+  time_entries: {
+    start_time: string;
+    end_time: string | null;
+    clients: { nombre: string } | null;
+    activities: { nombre: string } | null;
+  } | null;
+}
+
+interface AutoClosedRow {
+  id: string;
+  start_time: string;
+  end_time: string | null;
   users: { nombre: string } | null;
   clients: { nombre: string } | null;
   activities: { nombre: string } | null;
@@ -47,6 +81,42 @@ export default async function AdminDashboardPage() {
     .order("start_time", { ascending: true });
 
   const activeTimers = (activeTimersRaw ?? []) as unknown as ActiveTimerRow[];
+
+  const { data: pendingActivitiesRaw } = await supabase
+    .from("activities")
+    .select("id, nombre, motivo, created_at, clients(nombre), users!sugerida_por(nombre)")
+    .eq("estado_aprobacion", "pendiente")
+    .order("created_at", { ascending: true });
+
+  const pendingActivities = (pendingActivitiesRaw ?? []) as unknown as PendingActivityRow[];
+
+  const { data: pendingCorrectionsRaw } = await supabase
+    .from("activity_corrections")
+    .select(
+      "id, motivo, nueva_hora_fin_sugerida, created_at, users!user_id(nombre), time_entries(start_time, end_time, clients(nombre), activities(nombre))"
+    )
+    .eq("estado", "pendiente")
+    .order("created_at", { ascending: true });
+
+  const pendingCorrections = (pendingCorrectionsRaw ?? []) as unknown as PendingCorrectionRow[];
+
+  const { data: autoClosedRaw } = await supabase
+    .from("time_entries")
+    .select("id, start_time, end_time, users(nombre), clients(nombre), activities(nombre)")
+    .eq("estado", "cerrado_automaticamente")
+    .order("start_time", { ascending: false })
+    .limit(20);
+
+  const autoClosed = (autoClosedRaw ?? []) as unknown as AutoClosedRow[];
+
+  function formatDateTime(iso: string) {
+    return new Date(iso).toLocaleString("es-CO", {
+      day: "numeric",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }
 
   return (
     <div className="space-y-6">
@@ -120,7 +190,7 @@ export default async function AdminDashboardPage() {
               <TableRow>
                 <TableHead>Miembro</TableHead>
                 <TableHead>Cliente</TableHead>
-                <TableHead>Proceso</TableHead>
+                <TableHead>Actividad</TableHead>
                 <TableHead>Desde</TableHead>
                 <TableHead className="text-right">Tiempo transcurrido</TableHead>
               </TableRow>
@@ -150,6 +220,151 @@ export default async function AdminDashboardPage() {
                   </TableCell>
                   <TableCell className="text-right">
                     <LiveDuration startTime={timer.start_time} />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Lightbulb className="h-4 w-4 text-accent" />
+            Actividades pendientes de aprobación
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Cliente</TableHead>
+                <TableHead>Actividad</TableHead>
+                <TableHead>Motivo</TableHead>
+                <TableHead>Sugerida por</TableHead>
+                <TableHead>Fecha</TableHead>
+                <TableHead className="text-right">Acciones</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {pendingActivities.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center text-muted-foreground">
+                    No hay actividades pendientes de aprobación.
+                  </TableCell>
+                </TableRow>
+              )}
+              {pendingActivities.map((a) => (
+                <TableRow key={a.id}>
+                  <TableCell>{a.clients?.nombre ?? "—"}</TableCell>
+                  <TableCell className="font-medium">{a.nombre}</TableCell>
+                  <TableCell className="max-w-xs truncate text-muted-foreground">
+                    {a.motivo ?? "—"}
+                  </TableCell>
+                  <TableCell>{a.users?.nombre ?? "—"}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {formatDateTime(a.created_at)}
+                  </TableCell>
+                  <TableCell>
+                    <ActivityApprovalActions activityId={a.id} />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Pencil className="h-4 w-4 text-accent" />
+            Correcciones pendientes
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Miembro</TableHead>
+                <TableHead>Cliente / Actividad</TableHead>
+                <TableHead>Hora actual → sugerida</TableHead>
+                <TableHead>Motivo</TableHead>
+                <TableHead className="text-right">Acciones</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {pendingCorrections.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center text-muted-foreground">
+                    No hay correcciones pendientes.
+                  </TableCell>
+                </TableRow>
+              )}
+              {pendingCorrections.map((c) => (
+                <TableRow key={c.id}>
+                  <TableCell>{c.users?.nombre ?? "—"}</TableCell>
+                  <TableCell>
+                    {c.time_entries?.clients?.nombre ?? "—"} ·{" "}
+                    {c.time_entries?.activities?.nombre ?? "—"}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {c.time_entries?.end_time ? formatDateTime(c.time_entries.end_time) : "—"}
+                    {" → "}
+                    {formatDateTime(c.nueva_hora_fin_sugerida)}
+                  </TableCell>
+                  <TableCell className="max-w-xs truncate text-muted-foreground">
+                    {c.motivo}
+                  </TableCell>
+                  <TableCell>
+                    <CorrectionApprovalActions correctionId={c.id} />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <AlertTriangle className="h-4 w-4 text-destructive" />
+            Timers cerrados automáticamente — requieren revisión
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Miembro</TableHead>
+                <TableHead>Cliente</TableHead>
+                <TableHead>Actividad</TableHead>
+                <TableHead>Inicio</TableHead>
+                <TableHead>Cierre automático</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {autoClosed.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center text-muted-foreground">
+                    No hay timers cerrados automáticamente.
+                  </TableCell>
+                </TableRow>
+              )}
+              {autoClosed.map((t) => (
+                <TableRow key={t.id}>
+                  <TableCell className="font-medium">{t.users?.nombre ?? "—"}</TableCell>
+                  <TableCell>{t.clients?.nombre ?? "—"}</TableCell>
+                  <TableCell>
+                    <Badge variant="secondary">{t.activities?.nombre ?? "—"}</Badge>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {formatDateTime(t.start_time)}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {t.end_time ? formatDateTime(t.end_time) : "—"}
                   </TableCell>
                 </TableRow>
               ))}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { Play, Square, Clock3, Loader2 } from "lucide-react";
+import { Play, Square, Clock3, Loader2, WifiOff } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,8 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { formatDurationShort } from "@/lib/format";
 import { startActivity, stopActivity } from "./actions";
+import { SuggestActivityDialog } from "./suggest-activity-dialog";
+import { RequestCorrectionDialog } from "./request-correction-dialog";
 
 export interface AssignedClient {
   id: string;
@@ -74,11 +76,24 @@ export function TimerPanel({
   const [elapsed, setElapsed] = useState(0);
   const [pendingActivityId, setPendingActivityId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [isOnline, setIsOnline] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
     setActiveEntry(initialActiveEntry);
   }, [initialActiveEntry]);
+
+  useEffect(() => {
+    setIsOnline(navigator.onLine);
+    const goOnline = () => setIsOnline(true);
+    const goOffline = () => setIsOnline(false);
+    window.addEventListener("online", goOnline);
+    window.addEventListener("offline", goOffline);
+    return () => {
+      window.removeEventListener("online", goOnline);
+      window.removeEventListener("offline", goOffline);
+    };
+  }, []);
 
   useEffect(() => {
     if (!activeEntry) {
@@ -137,6 +152,13 @@ export function TimerPanel({
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
+      {!isOnline && (
+        <div className="flex items-center gap-2 rounded-md border border-warning bg-warning/10 px-4 py-2.5 text-sm text-warning-foreground">
+          <WifiOff className="h-4 w-4 shrink-0" />
+          Sin conexión — tu tiempo se sigue contando localmente. Iniciar y detener actividades
+          vuelve a estar disponible al reconectar.
+        </div>
+      )}
       <Card
         className={cn(
           "sticky top-0 z-10 border-2",
@@ -163,7 +185,7 @@ export function TimerPanel({
                 size="lg"
                 variant="destructive"
                 onClick={handleStop}
-                disabled={isPending}
+                disabled={isPending || !isOnline}
                 className="gap-2"
               >
                 {isPending ? (
@@ -183,7 +205,10 @@ export function TimerPanel({
       </Card>
 
       <div className="space-y-4">
-        <h2 className="text-lg font-semibold text-kuenti-slate">Mis clientes</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-kuenti-slate">Mis clientes</h2>
+          <SuggestActivityDialog clients={clients.map((c) => ({ id: c.id, nombre: c.nombre }))} />
+        </div>
         {clients.length === 0 && (
           <p className="text-sm text-muted-foreground">
             Aún no tienes clientes asignados. Contacta a tu administrador.
@@ -217,7 +242,7 @@ export function TimerPanel({
                         size="sm"
                         variant="destructive"
                         onClick={handleStop}
-                        disabled={isPending}
+                        disabled={isPending || !isOnline}
                         className="gap-1.5"
                       >
                         {isLoadingThis ? (
@@ -234,7 +259,7 @@ export function TimerPanel({
                         onClick={() =>
                           handleStart(client.id, client.nombre, activity.id, activity.nombre)
                         }
-                        disabled={isPending}
+                        disabled={isPending || !isOnline}
                         className="gap-1.5"
                       >
                         {isLoadingThis ? (
@@ -270,12 +295,13 @@ export function TimerPanel({
                   <TableHead>Inicio</TableHead>
                   <TableHead>Fin</TableHead>
                   <TableHead className="text-right">Duración</TableHead>
+                  <TableHead className="w-10" />
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {todayEntries.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground">
+                    <TableCell colSpan={6} className="text-center text-muted-foreground">
                       Sin registros hoy.
                     </TableCell>
                   </TableRow>
@@ -292,6 +318,14 @@ export function TimerPanel({
                       {entry.durationSeconds != null
                         ? formatHMS(entry.durationSeconds)
                         : "—"}
+                    </TableCell>
+                    <TableCell>
+                      {entry.endTime && (
+                        <RequestCorrectionDialog
+                          timeEntryId={entry.id}
+                          currentEndTime={entry.endTime}
+                        />
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}

@@ -117,6 +117,7 @@ export interface Database {
           mes_aplicable: string | null;
           estado_aprobacion: EstadoAprobacion;
           sugerida_por: string | null;
+          motivo: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -129,6 +130,7 @@ export interface Database {
           mes_aplicable?: string | null;
           estado_aprobacion?: EstadoAprobacion;
           sugerida_por?: string | null;
+          motivo?: string | null;
         };
         Update: {
           client_id?: string;
