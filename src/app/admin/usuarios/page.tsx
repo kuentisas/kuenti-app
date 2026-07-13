@@ -14,6 +14,7 @@ import { InviteDialog } from "./invite-dialog";
 import { ReassignDialog } from "./reassign-dialog";
 import { UserStatusActions } from "./user-status-actions";
 import { SalaryDialog } from "./salary-dialog";
+import { ResetPasswordDialog } from "./reset-password-dialog";
 
 export default async function UsuariosPage() {
   const supabase = createClient();
@@ -130,12 +131,17 @@ export default async function UsuariosPage() {
                       </div>
                     </TableCell>
                     <TableCell className="text-right">
-                      <UserStatusActions
-                        userId={u.id}
-                        nombre={u.nombre}
-                        activo={u.activo}
-                        deleted={!!u.deleted_at}
-                      />
+                      <div className="flex items-center justify-end gap-1">
+                        {!u.deleted_at && (
+                          <ResetPasswordDialog userId={u.id} nombre={u.nombre} />
+                        )}
+                        <UserStatusActions
+                          userId={u.id}
+                          nombre={u.nombre}
+                          activo={u.activo}
+                          deleted={!!u.deleted_at}
+                        />
+                      </div>
                     </TableCell>
                   </TableRow>
                 );

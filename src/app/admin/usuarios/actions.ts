@@ -66,6 +66,54 @@ export async function createTeamMember(formData: FormData) {
   return { error: null };
 }
 
+const resetPasswordSchema = z.object({
+  userId: z.string().uuid(),
+  password: z.string().min(8, "La contraseña debe tener al menos 8 caracteres"),
+  debeCambiarPassword: z.boolean(),
+});
+
+// Para una cuenta que ya existe (contraseña olvidada, invitación vieja
+// rota, etc.) — a diferencia de createTeamMember, no crea un usuario
+// nuevo. Usa el cliente admin para ambas escrituras: updateUserById
+// (auth) requiere service_role de por sí, y se reutiliza el mismo
+// cliente para el flag de perfil por consistencia con ese patrón.
+export async function resetUserPassword(
+  userId: string,
+  password: string,
+  debeCambiarPassword: boolean
+) {
+  const parsed = resetPasswordSchema.safeParse({ userId, password, debeCambiarPassword });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Datos inválidos" };
+  }
+
+  let adminClient;
+  try {
+    adminClient = createAdminClient();
+  } catch {
+    return {
+      error:
+        "Falta configurar SUPABASE_SERVICE_ROLE_KEY en el servidor para poder restablecer contraseñas.",
+    };
+  }
+
+  const { error: authError } = await adminClient.auth.admin.updateUserById(parsed.data.userId, {
+    password: parsed.data.password,
+  });
+
+  if (authError) return { error: authError.message };
+
+  const { error: profileError } = await adminClient
+    .from("users")
+    .update({ debe_cambiar_password: parsed.data.debeCambiarPassword })
+    .eq("id", parsed.data.userId);
+
+  if (profileError) return { error: profileError.message };
+
+  revalidatePath("/admin/usuarios");
+  return { error: null };
+}
+
 export async function deactivateUser(userId: string) {
   const supabase = createClient();
   const {
