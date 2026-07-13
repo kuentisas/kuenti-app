@@ -6,17 +6,26 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-const inviteSchema = z.object({
+const createMemberSchema = z.object({
   nombre: z.string().trim().min(1, "El nombre es requerido"),
   email: z.string().trim().email("Correo inválido"),
   role: z.enum(["admin", "colaboradora"]),
+  password: z.string().min(8, "La contraseña debe tener al menos 8 caracteres"),
+  debeCambiarPassword: z.boolean(),
 });
 
-export async function inviteUser(formData: FormData) {
-  const parsed = inviteSchema.safeParse({
+// Opción B: el admin asigna la contraseña directamente (en vez de
+// invitación por correo) — no depende de que el correo llegue ni de la
+// configuración de Site URL/Redirect URLs de Supabase Auth. Con
+// debeCambiarPassword=true, el middleware obliga a cambiarla en el primer
+// inicio de sesión.
+export async function createTeamMember(formData: FormData) {
+  const parsed = createMemberSchema.safeParse({
     nombre: formData.get("nombre"),
     email: formData.get("email"),
     role: formData.get("role"),
+    password: formData.get("password"),
+    debeCambiarPassword: formData.get("debeCambiarPassword") === "true",
   });
 
   if (!parsed.success) {
@@ -29,15 +38,29 @@ export async function inviteUser(formData: FormData) {
   } catch {
     return {
       error:
-        "Falta configurar SUPABASE_SERVICE_ROLE_KEY en el servidor para poder invitar usuarios.",
+        "Falta configurar SUPABASE_SERVICE_ROLE_KEY en el servidor para poder crear usuarios.",
     };
   }
 
-  const { error } = await adminClient.auth.admin.inviteUserByEmail(parsed.data.email, {
-    data: { nombre: parsed.data.nombre, role: parsed.data.role },
+  const { data: created, error: createErr } = await adminClient.auth.admin.createUser({
+    email: parsed.data.email,
+    password: parsed.data.password,
+    email_confirm: true,
+    user_metadata: { nombre: parsed.data.nombre, role: parsed.data.role },
   });
 
-  if (error) return { error: error.message };
+  if (createErr) return { error: createErr.message };
+
+  // handle_new_auth_user ya creó la fila en public.users con nombre/role
+  // desde los metadatos (mismo trigger de siempre); acá solo completamos
+  // el flag de cambio de contraseña obligatorio.
+  const supabase = createClient();
+  const { error: updateErr } = await supabase
+    .from("users")
+    .update({ debe_cambiar_password: parsed.data.debeCambiarPassword })
+    .eq("id", created.user.id);
+
+  if (updateErr) return { error: updateErr.message };
 
   revalidatePath("/admin/usuarios");
   return { error: null };

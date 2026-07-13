@@ -48,7 +48,7 @@ export default async function UsuariosPage() {
         <div>
           <h1 className="text-2xl font-semibold text-kuenti-slate">Equipo</h1>
           <p className="text-sm text-muted-foreground">
-            Invita, desactiva, reactiva o elimina usuarios. El historial de horas se
+            Agrega, desactiva, reactiva o elimina usuarios. El historial de horas se
             conserva siempre.
           </p>
         </div>

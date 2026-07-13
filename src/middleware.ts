@@ -4,6 +4,7 @@ import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import type { Database } from "@/types/database";
 
 const PUBLIC_PATHS = ["/login", "/auth/callback"];
+const CAMBIAR_PASSWORD_PATH = "/cambiar-password";
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request: { headers: request.headers } });
@@ -47,7 +48,7 @@ export async function middleware(request: NextRequest) {
   // Usuario autenticado: valida que el perfil siga activo y obtiene su rol.
   const { data: profile } = await supabase
     .from("users")
-    .select("role, activo, deleted_at")
+    .select("role, activo, deleted_at, debe_cambiar_password")
     .eq("id", user.id)
     .single();
 
@@ -60,6 +61,21 @@ export async function middleware(request: NextRequest) {
   }
 
   if (isPublicPath) {
+    const url = request.nextUrl.clone();
+    url.pathname = profile.role === "admin" ? "/admin" : "/panel";
+    return NextResponse.redirect(url);
+  }
+
+  // Contraseña temporal asignada por el admin: bloquea toda la app hasta
+  // que la cambie. Se evalúa antes que las reglas de /admin y /panel para
+  // que ningún rol pueda esquivarlo.
+  if (profile.debe_cambiar_password && path !== CAMBIAR_PASSWORD_PATH) {
+    const url = request.nextUrl.clone();
+    url.pathname = CAMBIAR_PASSWORD_PATH;
+    return NextResponse.redirect(url);
+  }
+
+  if (!profile.debe_cambiar_password && path === CAMBIAR_PASSWORD_PATH) {
     const url = request.nextUrl.clone();
     url.pathname = profile.role === "admin" ? "/admin" : "/panel";
     return NextResponse.redirect(url);

@@ -19,6 +19,7 @@ export interface Database {
           role: Role;
           activo: boolean;
           deleted_at: string | null;
+          debe_cambiar_password: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -29,6 +30,7 @@ export interface Database {
           role?: Role;
           activo?: boolean;
           deleted_at?: string | null;
+          debe_cambiar_password?: boolean;
         };
         Update: {
           email?: string;
@@ -36,6 +38,7 @@ export interface Database {
           role?: Role;
           activo?: boolean;
           deleted_at?: string | null;
+          debe_cambiar_password?: boolean;
         };
         Relationships: [];
       };
