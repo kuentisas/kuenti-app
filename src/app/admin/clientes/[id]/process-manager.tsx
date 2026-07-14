@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Loader2, Plus, Pencil } from "lucide-react";
+import { Loader2, Plus, Pencil, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,8 +15,19 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/use-toast";
-import { createProcess, toggleProcessActivo, updateProcess } from "./actions";
+import { createProcess, deleteProcess, toggleProcessActivo, updateProcess } from "./actions";
 
 interface ActivityItem {
   id: string;
@@ -72,6 +83,63 @@ function EditProcessDialog({
         </form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function DeleteProcessDialog({
+  clientId,
+  process,
+}: {
+  clientId: string;
+  process: ActivityItem;
+}) {
+  const [isPending, startTransition] = useTransition();
+  const { toast } = useToast();
+
+  function handleDelete() {
+    startTransition(async () => {
+      const result = await deleteProcess(process.id, clientId);
+      if (result.error) {
+        toast({ variant: "destructive", title: "Error", description: result.error });
+        return;
+      }
+      if (result.mode === "soft") {
+        toast({
+          title: "Actividad desactivada",
+          description:
+            "Ya tiene horas registradas, así que no se puede eliminar por completo; se desactivó para conservar el historial.",
+        });
+      } else {
+        toast({ title: "Actividad eliminada" });
+      }
+    });
+  }
+
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>¿Eliminar "{process.nombre}"?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Si nunca registró horas, se elimina por completo. Si ya tiene horas
+            registradas, no se puede eliminar sin perder ese historial — en ese caso se
+            desactiva en su lugar.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogAction onClick={handleDelete} disabled={isPending} className="gap-2">
+            {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+            Eliminar
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 
@@ -146,6 +214,7 @@ export function ProcessManager({
                 }}
               />
               <EditProcessDialog clientId={clientId} process={activity} />
+              <DeleteProcessDialog clientId={clientId} process={activity} />
             </div>
           </div>
         ))}

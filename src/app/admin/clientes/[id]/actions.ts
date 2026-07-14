@@ -23,7 +23,14 @@ export async function createProcess(clientId: string, nombres: string[]) {
     .from("activities")
     .insert(cleaned.map((nombre) => ({ client_id: clientId, nombre })));
 
-  if (error) return { error: error.message };
+  if (error) {
+    // 23505: activities_client_nombre_unique_idx (migración 0018) — mismo
+    // nombre ya existe para este cliente (sin distinguir mayúsculas/espacios).
+    if (error.code === "23505") {
+      return { error: "Ya existe una actividad con ese nombre para este cliente." };
+    }
+    return { error: error.message };
+  }
 
   revalidatePath(`/admin/clientes/${clientId}`);
   return { error: null };
@@ -45,10 +52,46 @@ export async function updateProcess(
     .update({ nombre: parsed.data.nombre })
     .eq("id", activityId);
 
-  if (error) return { error: error.message };
+  if (error) {
+    if (error.code === "23505") {
+      return { error: "Ya existe una actividad con ese nombre para este cliente." };
+    }
+    return { error: error.message };
+  }
 
   revalidatePath(`/admin/clientes/${clientId}`);
   return { error: null };
+}
+
+// Si la actividad nunca registró horas, se elimina físicamente. Si ya tiene
+// time_entries asociadas, la FK (on delete restrict) lo impide a propósito
+// para no perder historial — en ese caso se desactiva en su lugar, mismo
+// patrón que el soft-delete de usuarios.
+export async function deleteProcess(activityId: string, clientId: string) {
+  const supabase = createClient();
+  const { error: deleteError } = await supabase
+    .from("activities")
+    .delete()
+    .eq("id", activityId);
+
+  if (!deleteError) {
+    revalidatePath(`/admin/clientes/${clientId}`);
+    return { error: null, mode: "hard" as const };
+  }
+
+  if (deleteError.code !== "23503") {
+    return { error: deleteError.message };
+  }
+
+  const { error: deactivateError } = await supabase
+    .from("activities")
+    .update({ activo: false })
+    .eq("id", activityId);
+
+  if (deactivateError) return { error: deactivateError.message };
+
+  revalidatePath(`/admin/clientes/${clientId}`);
+  return { error: null, mode: "soft" as const };
 }
 
 export async function toggleProcessActivo(
