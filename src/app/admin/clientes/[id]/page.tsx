@@ -38,9 +38,9 @@ export default async function ClientDetailPage({
     await Promise.all([
       supabase
         .from("activities")
-        .select("id, nombre, activo")
+        .select("id, nombre, activo, orden")
         .eq("client_id", params.id)
-        .order("nombre"),
+        .order("orden"),
       supabase
         .from("client_assignments")
         .select("user_id")

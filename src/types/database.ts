@@ -121,6 +121,7 @@ export interface Database {
           estado_aprobacion: EstadoAprobacion;
           sugerida_por: string | null;
           motivo: string | null;
+          orden: number;
           created_at: string;
           updated_at: string;
         };
@@ -134,6 +135,7 @@ export interface Database {
           estado_aprobacion?: EstadoAprobacion;
           sugerida_por?: string | null;
           motivo?: string | null;
+          orden?: number;
         };
         Update: {
           client_id?: string;
@@ -142,6 +144,7 @@ export interface Database {
           tipo?: ActivityTipo;
           mes_aplicable?: string | null;
           estado_aprobacion?: EstadoAprobacion;
+          orden?: number;
         };
         Relationships: [
           {

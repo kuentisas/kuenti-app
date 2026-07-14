@@ -19,9 +19,21 @@ export async function createProcess(clientId: string, nombres: string[]) {
   }
 
   const supabase = createClient();
+
+  // Las nuevas actividades se agregan al final del orden manual existente
+  // (ver migración 0019 y reorderProcesses más abajo).
+  const { data: maxOrdenRow } = await supabase
+    .from("activities")
+    .select("orden")
+    .eq("client_id", clientId)
+    .order("orden", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  let nextOrden = (maxOrdenRow?.orden ?? -1) + 1;
   const { error } = await supabase
     .from("activities")
-    .insert(cleaned.map((nombre) => ({ client_id: clientId, nombre })));
+    .insert(cleaned.map((nombre) => ({ client_id: clientId, nombre, orden: nextOrden++ })));
 
   if (error) {
     // 23505: activities_client_nombre_unique_idx (migración 0018) — mismo
@@ -106,6 +118,25 @@ export async function toggleProcessActivo(
     .eq("id", activityId);
 
   if (error) return { error: error.message };
+
+  revalidatePath(`/admin/clientes/${clientId}`);
+  return { error: null };
+}
+
+// orderedIds trae TODOS los ids de actividades del cliente en el nuevo
+// orden (lo arma el drag-and-drop en el cliente); se persiste como el
+// índice de cada uno en el arreglo.
+export async function reorderProcesses(clientId: string, orderedIds: string[]) {
+  const supabase = createClient();
+
+  const results = await Promise.all(
+    orderedIds.map((id, index) =>
+      supabase.from("activities").update({ orden: index }).eq("id", id).eq("client_id", clientId)
+    )
+  );
+
+  const failed = results.find((r) => r.error);
+  if (failed?.error) return { error: failed.error.message };
 
   revalidatePath(`/admin/clientes/${clientId}`);
   return { error: null };

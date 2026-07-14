@@ -1,7 +1,21 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { Loader2, Plus, Pencil, Trash2 } from "lucide-react";
+import { useEffect, useState, useTransition } from "react";
+import { Loader2, Plus, Pencil, Trash2, GripVertical } from "lucide-react";
+import {
+  DndContext,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,7 +41,13 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/use-toast";
-import { createProcess, deleteProcess, toggleProcessActivo, updateProcess } from "./actions";
+import {
+  createProcess,
+  deleteProcess,
+  reorderProcesses,
+  toggleProcessActivo,
+  updateProcess,
+} from "./actions";
 
 interface ActivityItem {
   id: string;
@@ -143,6 +163,46 @@ function DeleteProcessDialog({
   );
 }
 
+function SortableActivityRow({
+  activity,
+  clientId,
+  onToggle,
+}: {
+  activity: ActivityItem;
+  clientId: string;
+  onToggle: (checked: boolean) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: activity.id,
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={`flex items-center justify-between px-4 py-3 ${isDragging ? "relative z-10 bg-secondary/40" : ""}`}
+    >
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          className="cursor-grab touch-none text-muted-foreground hover:text-foreground active:cursor-grabbing"
+          aria-label="Arrastrar para reordenar"
+          {...attributes}
+          {...listeners}
+        >
+          <GripVertical className="h-4 w-4" />
+        </button>
+        <span className="text-sm font-medium">{activity.nombre}</span>
+      </div>
+      <div className="flex items-center gap-3">
+        <Switch checked={activity.activo} onCheckedChange={onToggle} />
+        <EditProcessDialog clientId={clientId} process={activity} />
+        <DeleteProcessDialog clientId={clientId} process={activity} />
+      </div>
+    </div>
+  );
+}
+
 export function ProcessManager({
   clientId,
   activities,
@@ -152,7 +212,39 @@ export function ProcessManager({
 }) {
   const [isPending, startTransition] = useTransition();
   const [newName, setNewName] = useState("");
+  const [items, setItems] = useState(activities);
   const { toast } = useToast();
+
+  useEffect(() => {
+    setItems(activities);
+  }, [activities]);
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = items.findIndex((a) => a.id === active.id);
+    const newIndex = items.findIndex((a) => a.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const reordered = [...items];
+    const [moved] = reordered.splice(oldIndex, 1);
+    reordered.splice(newIndex, 0, moved);
+    setItems(reordered);
+
+    startTransition(async () => {
+      const result = await reorderProcesses(
+        clientId,
+        reordered.map((a) => a.id)
+      );
+      if (result.error) {
+        toast({ variant: "destructive", title: "Error", description: result.error });
+        setItems(activities);
+      }
+    });
+  }
 
   function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -192,33 +284,35 @@ export function ProcessManager({
         <span className="font-medium">Nómina, IVA, Contabilidad</span>.
       </p>
 
-      <div className="divide-y rounded-md border">
-        {activities.length === 0 && (
+      {items.length === 0 ? (
+        <div className="rounded-md border">
           <p className="p-4 text-sm text-muted-foreground">
             Este cliente no tiene actividades aún.
           </p>
-        )}
-        {activities.map((activity) => (
-          <div key={activity.id} className="flex items-center justify-between px-4 py-3">
-            <span className="text-sm font-medium">{activity.nombre}</span>
-            <div className="flex items-center gap-3">
-              <Switch
-                checked={activity.activo}
-                onCheckedChange={(checked) => {
-                  startTransition(async () => {
-                    const result = await toggleProcessActivo(activity.id, clientId, checked);
-                    if (result.error) {
-                      toast({ variant: "destructive", title: "Error", description: result.error });
-                    }
-                  });
-                }}
-              />
-              <EditProcessDialog clientId={clientId} process={activity} />
-              <DeleteProcessDialog clientId={clientId} process={activity} />
+        </div>
+      ) : (
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={items.map((a) => a.id)} strategy={verticalListSortingStrategy}>
+            <div className="divide-y rounded-md border">
+              {items.map((activity) => (
+                <SortableActivityRow
+                  key={activity.id}
+                  activity={activity}
+                  clientId={clientId}
+                  onToggle={(checked) => {
+                    startTransition(async () => {
+                      const result = await toggleProcessActivo(activity.id, clientId, checked);
+                      if (result.error) {
+                        toast({ variant: "destructive", title: "Error", description: result.error });
+                      }
+                    });
+                  }}
+                />
+              ))}
             </div>
-          </div>
-        ))}
-      </div>
+          </SortableContext>
+        </DndContext>
+      )}
     </div>
   );
 }

@@ -15,6 +15,7 @@ interface AssignmentRow {
       tipo: "recurrente" | "eventual";
       mes_aplicable: string | null;
       estado_aprobacion: "aprobada" | "pendiente" | "rechazada";
+      orden: number;
     }[];
   } | null;
 }
@@ -48,7 +49,7 @@ export default async function PanelPage() {
   const { data: assignments } = await supabase
     .from("client_assignments")
     .select(
-      "clients(id, nombre, activo, activities(id, nombre, activo, tipo, mes_aplicable, estado_aprobacion))"
+      "clients(id, nombre, activo, activities(id, nombre, activo, tipo, mes_aplicable, estado_aprobacion, orden))"
     )
     .eq("user_id", user.id);
 
@@ -66,12 +67,14 @@ export default async function PanelPage() {
       .map((c) => ({
         id: c.id,
         nombre: c.nombre,
-        activities: c.activities.filter(
-          (p) =>
-            p.activo &&
-            p.estado_aprobacion === "aprobada" &&
-            (p.tipo === "recurrente" || p.mes_aplicable === currentMonth)
-        ),
+        activities: c.activities
+          .filter(
+            (p) =>
+              p.activo &&
+              p.estado_aprobacion === "aprobada" &&
+              (p.tipo === "recurrente" || p.mes_aplicable === currentMonth)
+          )
+          .sort((a, b) => a.orden - b.orden),
       }))
   );
 
