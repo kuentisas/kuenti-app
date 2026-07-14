@@ -9,16 +9,19 @@ const activitySchema = z.object({
   nombre: z.string().trim().min(1, "El nombre es requerido"),
 });
 
-export async function createProcess(clientId: string, formData: FormData) {
-  const parsed = activitySchema.safeParse({ nombre: formData.get("nombre") });
-  if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Datos inválidos" };
+// Acepta varios nombres a la vez (separados por coma en la UI) para no
+// obligar a agregar las actividades de un cliente una por una. Un solo
+// insert con varias filas: o se crean todas, o ninguna.
+export async function createProcess(clientId: string, nombres: string[]) {
+  const cleaned = nombres.map((n) => n.trim()).filter((n) => n.length > 0);
+  if (cleaned.length === 0) {
+    return { error: "El nombre es requerido" };
   }
 
   const supabase = createClient();
   const { error } = await supabase
     .from("activities")
-    .insert({ client_id: clientId, nombre: parsed.data.nombre });
+    .insert(cleaned.map((nombre) => ({ client_id: clientId, nombre })));
 
   if (error) return { error: error.message };
 

@@ -88,15 +88,20 @@ export function ProcessManager({
 
   function handleCreate(e: React.FormEvent) {
     e.preventDefault();
-    if (!newName.trim()) return;
-    const formData = new FormData();
-    formData.set("nombre", newName.trim());
+    const nombres = newName
+      .split(",")
+      .map((n) => n.trim())
+      .filter((n) => n.length > 0);
+    if (nombres.length === 0) return;
     startTransition(async () => {
-      const result = await createProcess(clientId, formData);
+      const result = await createProcess(clientId, nombres);
       if (result.error) {
         toast({ variant: "destructive", title: "Error", description: result.error });
         return;
       }
+      toast({
+        title: nombres.length > 1 ? `${nombres.length} actividades agregadas` : "Actividad agregada",
+      });
       setNewName("");
     });
   }
@@ -107,13 +112,17 @@ export function ProcessManager({
         <Input
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
-          placeholder="Nombre de la actividad (ej. Nómina, IVA, Contabilidad)"
+          placeholder="Nombre de la actividad"
         />
         <Button type="submit" disabled={isPending} className="shrink-0 gap-2">
           <Plus className="h-4 w-4" />
           Agregar
         </Button>
       </form>
+      <p className="text-xs text-muted-foreground">
+        Puedes agregar varias actividades a la vez separándolas por comas, por ejemplo:{" "}
+        <span className="font-medium">Nómina, IVA, Contabilidad</span>.
+      </p>
 
       <div className="divide-y rounded-md border">
         {activities.length === 0 && (
