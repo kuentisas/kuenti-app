@@ -200,41 +200,54 @@ export async function deleteUser(userId: string) {
   return { error: null, mode: "soft" as const };
 }
 
-export async function reassignAllClients(fromUserId: string, toUserId: string) {
+// clientIds: subconjunto elegido en el diálogo (puede ser todos o solo
+// algunos). Solo se toca client_assignments — nunca time_entries, así que
+// el historial de horas ya registrado se queda con su autor original,
+// pase lo que pase con la asignación futura.
+export async function reassignClients(fromUserId: string, toUserId: string, clientIds: string[]) {
   if (fromUserId === toUserId) {
     return { error: "Selecciona un miembro del equipo distinto como destino." };
+  }
+  if (clientIds.length === 0) {
+    return { error: "Selecciona al menos un cliente para reasignar." };
   }
 
   const supabase = createClient();
 
+  // Se reasigna solo lo que sigue realmente asignado a fromUserId hoy —
+  // evita reasignar de más si el estado en pantalla quedó desfasado.
   const { data: fromAssignments, error: fetchError } = await supabase
     .from("client_assignments")
     .select("client_id")
-    .eq("user_id", fromUserId);
+    .eq("user_id", fromUserId)
+    .in("client_id", clientIds);
 
   if (fetchError) return { error: fetchError.message };
 
-  const clientIds = (fromAssignments ?? []).map((a) => a.client_id);
+  const actualClientIds = (fromAssignments ?? []).map((a) => a.client_id);
+
+  if (actualClientIds.length === 0) {
+    return { error: "Ninguno de los clientes seleccionados sigue asignado a este miembro." };
+  }
 
   const { error: deleteError } = await supabase
     .from("client_assignments")
     .delete()
-    .eq("user_id", fromUserId);
+    .eq("user_id", fromUserId)
+    .in("client_id", actualClientIds);
 
   if (deleteError) return { error: deleteError.message };
 
-  if (clientIds.length > 0) {
-    const rows = clientIds.map((client_id) => ({ client_id, user_id: toUserId }));
-    const { error: insertError } = await supabase
-      .from("client_assignments")
-      .upsert(rows, { onConflict: "client_id,user_id", ignoreDuplicates: true });
+  const rows = actualClientIds.map((client_id) => ({ client_id, user_id: toUserId }));
+  const { error: insertError } = await supabase
+    .from("client_assignments")
+    .upsert(rows, { onConflict: "client_id,user_id", ignoreDuplicates: true });
 
-    if (insertError) return { error: insertError.message };
-  }
+  if (insertError) return { error: insertError.message };
 
   revalidatePath("/admin/usuarios");
   revalidatePath("/admin/clientes");
-  return { error: null, count: clientIds.length };
+  return { error: null, count: actualClientIds.length };
 }
 
 const salarySchema = z.object({

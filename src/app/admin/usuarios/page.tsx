@@ -24,7 +24,7 @@ export default async function UsuariosPage() {
       .from("users")
       .select("id, nombre, email, role, activo, deleted_at, user_salaries(salario_mensual)")
       .order("nombre"),
-    supabase.from("client_assignments").select("user_id"),
+    supabase.from("client_assignments").select("user_id, client_id, clients(nombre)"),
   ]);
 
   const users = (usersRaw ?? []).map((u) => ({
@@ -34,9 +34,14 @@ export default async function UsuariosPage() {
         ?.salario_mensual ?? null,
   }));
 
-  const countByUser = new Map<string, number>();
+  const clientsByUser = new Map<string, { id: string; nombre: string }[]>();
   for (const a of assignments ?? []) {
-    countByUser.set(a.user_id, (countByUser.get(a.user_id) ?? 0) + 1);
+    const list = clientsByUser.get(a.user_id) ?? [];
+    list.push({
+      id: a.client_id,
+      nombre: (a.clients as unknown as { nombre: string } | null)?.nombre ?? "—",
+    });
+    clientsByUser.set(a.user_id, list);
   }
 
   const allColaboradoras = users.filter(
@@ -79,7 +84,8 @@ export default async function UsuariosPage() {
                 </TableRow>
               )}
               {users.map((u) => {
-                const clientCount = countByUser.get(u.id) ?? 0;
+                const userClients = clientsByUser.get(u.id) ?? [];
+                const clientCount = userClients.length;
                 const otherColaboradoras = allColaboradoras.filter((c) => c.id !== u.id);
                 return (
                   <TableRow key={u.id}>
@@ -124,7 +130,7 @@ export default async function UsuariosPage() {
                           <ReassignDialog
                             fromUserId={u.id}
                             fromUserNombre={u.nombre}
-                            clientCount={clientCount}
+                            clients={userClients}
                             otherColaboradoras={otherColaboradoras}
                           />
                         )}
