@@ -10,6 +10,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { formatCOP, formatDurationShort, secondsToHours } from "@/lib/format";
 import { MonthForm } from "@/components/month-form";
 import { SettingsForm } from "./settings-form";
@@ -93,13 +94,25 @@ export default async function RentabilidadPage({
 
   const secondsByClient = new Map<string, number>();
   const costoByClient = new Map<string, number>();
+  // Por cliente: si alguna hora se costeó con salario real y/o con el
+  // promedio genérico (fallback) — un mismo cliente puede tener horas de
+  // varias colaboradoras, unas con salario cargado y otras sin él.
+  const hasRealByClient = new Map<string, boolean>();
+  const hasEstimatedByClient = new Map<string, boolean>();
   for (const e of entries) {
     const seconds = e.duration_seconds ?? 0;
     secondsByClient.set(e.client_id, (secondsByClient.get(e.client_id) ?? 0) + seconds);
 
-    const costoHora = costoHoraByUser.get(e.user_id) ?? costoHoraPromedio;
+    const costoHoraReal = costoHoraByUser.get(e.user_id);
+    const costoHora = costoHoraReal ?? costoHoraPromedio;
     const costo = secondsToHours(seconds) * costoHora;
     costoByClient.set(e.client_id, (costoByClient.get(e.client_id) ?? 0) + costo);
+
+    if (costoHoraReal != null) {
+      hasRealByClient.set(e.client_id, true);
+    } else {
+      hasEstimatedByClient.set(e.client_id, true);
+    }
   }
 
   const rows = clients.map((client) => {
@@ -107,7 +120,16 @@ export default async function RentabilidadPage({
     const horas = secondsToHours(seconds);
     const costo = costoByClient.get(client.id) ?? 0;
     const status = statusFor(costo, client.tarifa_mensual);
-    return { client, seconds, horas, costo, status };
+    const hasReal = hasRealByClient.get(client.id) ?? false;
+    const hasEstimated = hasEstimatedByClient.get(client.id) ?? false;
+    const costoTipo: "real" | "estimado" | "mixto" | null = hasEstimated
+      ? hasReal
+        ? "mixto"
+        : "estimado"
+      : hasReal
+        ? "real"
+        : null;
+    return { client, seconds, horas, costo, status, costoTipo };
   });
 
   const enPerdida = rows.filter((r) => r.status.label === "En pérdida").length;
@@ -181,7 +203,7 @@ export default async function RentabilidadPage({
                   </TableCell>
                 </TableRow>
               )}
-              {rows.map(({ client, seconds, costo, status }) => (
+              {rows.map(({ client, seconds, costo, status, costoTipo }) => (
                 <TableRow key={client.id}>
                   <TableCell className="font-medium">{client.nombre}</TableCell>
                   <TableCell className="text-right font-mono">
@@ -190,7 +212,37 @@ export default async function RentabilidadPage({
                   <TableCell className="text-right font-mono">
                     {client.tarifa_mensual > 0 ? formatCOP(client.tarifa_mensual) : "—"}
                   </TableCell>
-                  <TableCell className="text-right font-mono">{formatCOP(costo)}</TableCell>
+                  <TableCell className="text-right font-mono">
+                    <div className="flex items-center justify-end gap-1.5">
+                      {formatCOP(costo)}
+                      {costoTipo === "estimado" && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Badge variant="secondary" className="cursor-default text-[10px]">
+                              estimado
+                            </Badge>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            Ninguna colaboradora con horas en este cliente tiene salario
+                            cargado — se usó el costo hora promedio.
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+                      {costoTipo === "mixto" && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Badge variant="secondary" className="cursor-default text-[10px]">
+                              parcial
+                            </Badge>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            Incluye horas de colaboradoras sin salario cargado, costeadas con
+                            el promedio genérico.
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell className="text-right font-mono">
                     {client.tarifa_mensual > 0
                       ? `${Math.round((costo / client.tarifa_mensual) * 100)}%`
