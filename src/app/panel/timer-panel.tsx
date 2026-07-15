@@ -272,8 +272,8 @@ export function TimerPanel({
         )}
         {clients.map((client) => (
           <Card key={client.id}>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">{client.nombre}</CardTitle>
+            <CardHeader className="border-b bg-secondary/30 py-3">
+              <CardTitle className="text-lg text-kuenti-slate">{client.nombre}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               {client.activities.length === 0 && (
