@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
 import { bogotaMonthKey, startOfBogotaDay } from "@/lib/dates";
+import { RealtimeRefresher } from "@/components/realtime-refresher";
 import { TimerPanel, type AssignedClient, type TodayEntry } from "./timer-panel";
 
 interface AssignmentRow {
@@ -118,22 +119,29 @@ export default async function PanelPage() {
   const isStale = !!activeEntry && Date.now() - new Date(activeEntry.start_time).getTime() > 5 * 60 * 1000;
 
   return (
-    <TimerPanel
-      clients={clients}
-      activeEntry={
-        activeEntry
-          ? {
-              id: activeEntry.id,
-              clientId: activeEntry.client_id,
-              activityId: activeEntry.activity_id,
-              startTime: activeEntry.start_time,
-              clientNombre: activeEntry.clients?.nombre ?? "—",
-              activityNombre: activeEntry.activities?.nombre ?? "—",
-            }
-          : null
-      }
-      todayEntries={todayEntries}
-      initialIsStale={isStale}
-    />
+    <>
+      {/* Sin esto, una actividad recién aprobada (o agregada/desactivada
+          por el admin) no aparecía hasta que la colaboradora recargara la
+          página por su cuenta — y no tenía forma de saber que debía
+          hacerlo. Mismo patrón que el dashboard admin. */}
+      <RealtimeRefresher table="activities" />
+      <TimerPanel
+        clients={clients}
+        activeEntry={
+          activeEntry
+            ? {
+                id: activeEntry.id,
+                clientId: activeEntry.client_id,
+                activityId: activeEntry.activity_id,
+                startTime: activeEntry.start_time,
+                clientNombre: activeEntry.clients?.nombre ?? "—",
+                activityNombre: activeEntry.activities?.nombre ?? "—",
+              }
+            : null
+        }
+        todayEntries={todayEntries}
+        initialIsStale={isStale}
+      />
+    </>
   );
 }
