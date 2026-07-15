@@ -23,6 +23,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { formatDurationShort } from "@/lib/format";
+import { RequestCorrectionDialog } from "../request-correction-dialog";
 
 export interface SessionEntry {
   id: string;
@@ -79,6 +80,7 @@ export function ActivityDetailDialog({
               <TableHead>Horario</TableHead>
               <TableHead className="text-right">Duración</TableHead>
               <TableHead>Estado</TableHead>
+              <TableHead className="w-10" />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -111,6 +113,11 @@ export function ActivityDetailDialog({
                     )
                   ) : (
                     <span className="text-muted-foreground">—</span>
+                  )}
+                </TableCell>
+                <TableCell>
+                  {s.endTime && (
+                    <RequestCorrectionDialog timeEntryId={s.id} currentEndTime={s.endTime} />
                   )}
                 </TableCell>
               </TableRow>
