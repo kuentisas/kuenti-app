@@ -10,6 +10,8 @@ interface EntryRow {
   start_time: string;
   end_time: string | null;
   duration_seconds: number | null;
+  estado: string;
+  nota_ajuste: string | null;
   clients: { nombre: string } | null;
   activities: { nombre: string } | null;
 }
@@ -34,7 +36,9 @@ export default async function CalendarioPage({
 
   const { data: raw } = await supabase
     .from("time_entries")
-    .select("id, start_time, end_time, duration_seconds, clients(nombre), activities(nombre)")
+    .select(
+      "id, start_time, end_time, duration_seconds, estado, nota_ajuste, clients(nombre), activities(nombre)"
+    )
     .eq("user_id", user.id)
     .gte("start_time", monthStart.toISOString())
     .lte("start_time", monthEnd.toISOString())
@@ -53,6 +57,8 @@ export default async function CalendarioPage({
       startTime: e.start_time,
       endTime: e.end_time,
       durationSeconds: e.duration_seconds ?? 0,
+      ajustadoManualmente: e.estado === "ajustado_manualmente",
+      notaAjuste: e.nota_ajuste,
     });
     sessionsByDay.set(dateKey, list);
   }

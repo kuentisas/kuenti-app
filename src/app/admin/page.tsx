@@ -1,8 +1,9 @@
 import { Users, Clock, Activity, Lightbulb, Pencil, AlertTriangle } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
-import { BOGOTA_TZ, startOfBogotaDay } from "@/lib/dates";
+import { BOGOTA_TZ, bogotaMonthKey, endOfBogotaMonth, startOfBogotaDay, startOfBogotaMonth } from "@/lib/dates";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { MonthForm } from "@/components/month-form";
 import {
   Table,
   TableBody,
@@ -58,8 +59,26 @@ interface AutoClosedRow {
   activities: { nombre: string } | null;
 }
 
-export default async function AdminDashboardPage() {
+interface ManualAdjustmentRow {
+  id: string;
+  start_time: string;
+  end_time: string | null;
+  nota_ajuste: string | null;
+  users: { nombre: string } | null;
+  clients: { nombre: string } | null;
+  activities: { nombre: string } | null;
+}
+
+export default async function AdminDashboardPage({
+  searchParams,
+}: {
+  searchParams: { mes?: string };
+}) {
   const supabase = createClient();
+
+  const mesAjustesStr = searchParams.mes ?? bogotaMonthKey();
+  const ajustesMonthStart = startOfBogotaMonth(mesAjustesStr);
+  const ajustesMonthEnd = endOfBogotaMonth(mesAjustesStr);
 
   const startOfDay = startOfBogotaDay();
 
@@ -108,6 +127,23 @@ export default async function AdminDashboardPage() {
     .limit(20);
 
   const autoClosed = (autoClosedRaw ?? []) as unknown as AutoClosedRow[];
+
+  const { data: manualAdjustmentsRaw } = await supabase
+    .from("time_entries")
+    .select("id, start_time, end_time, nota_ajuste, users(nombre), clients(nombre), activities(nombre)")
+    .eq("estado", "ajustado_manualmente")
+    .gte("start_time", ajustesMonthStart.toISOString())
+    .lte("start_time", ajustesMonthEnd.toISOString())
+    .order("start_time", { ascending: false })
+    .limit(200);
+
+  const manualAdjustments = (manualAdjustmentsRaw ?? []) as unknown as ManualAdjustmentRow[];
+
+  const mesAjustesNombre = ajustesMonthStart.toLocaleDateString("es-CO", {
+    timeZone: BOGOTA_TZ,
+    month: "long",
+    year: "numeric",
+  });
 
   function formatDateTime(iso: string) {
     return new Date(iso).toLocaleString("es-CO", {
@@ -368,6 +404,57 @@ export default async function AdminDashboardPage() {
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {t.end_time ? formatDateTime(t.end_time) : "—"}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="space-y-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Pencil className="h-4 w-4 text-warning-foreground" />
+            Ajustes manuales — {mesAjustesNombre}
+          </CardTitle>
+          <MonthForm defaultMonth={mesAjustesStr} basePath="/admin" />
+        </CardHeader>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Miembro</TableHead>
+                <TableHead>Cliente</TableHead>
+                <TableHead>Actividad</TableHead>
+                <TableHead>Inicio</TableHead>
+                <TableHead>Fin (ajustado)</TableHead>
+                <TableHead>Motivo</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {manualAdjustments.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center text-muted-foreground">
+                    No hay ajustes manuales en {mesAjustesNombre}.
+                  </TableCell>
+                </TableRow>
+              )}
+              {manualAdjustments.map((m) => (
+                <TableRow key={m.id}>
+                  <TableCell className="font-medium">{m.users?.nombre ?? "—"}</TableCell>
+                  <TableCell>{m.clients?.nombre ?? "—"}</TableCell>
+                  <TableCell>
+                    <Badge variant="secondary">{m.activities?.nombre ?? "—"}</Badge>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {formatDateTime(m.start_time)}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {m.end_time ? formatDateTime(m.end_time) : "—"}
+                  </TableCell>
+                  <TableCell className="max-w-xs truncate text-muted-foreground">
+                    {m.nota_ajuste ?? "—"}
                   </TableCell>
                 </TableRow>
               ))}

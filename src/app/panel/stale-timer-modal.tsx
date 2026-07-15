@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Clock3, Loader2 } from "lucide-react";
+import { Clock3, Loader2, Play } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -24,10 +24,12 @@ export function StaleTimerModal({
   entry,
   elapsedSeconds,
   onResolved,
+  onKeepRunning,
 }: {
   entry: ActiveEntry;
   elapsedSeconds: number;
   onResolved: () => void;
+  onKeepRunning: () => void;
 }) {
   const [adjustOpen, setAdjustOpen] = useState(false);
   const [adjustMotivo, setAdjustMotivo] = useState<string | undefined>(undefined);
@@ -69,6 +71,15 @@ export function StaleTimerModal({
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
+            <Button
+              className="w-full justify-start gap-2 border-accent bg-accent/5 text-accent hover:bg-accent/10 hover:text-accent"
+              variant="outline"
+              disabled={isPending}
+              onClick={onKeepRunning}
+            >
+              <Play className="h-4 w-4" />
+              Sigo trabajando en esto ahora mismo (no detener)
+            </Button>
             <Button
               className="w-full justify-start gap-2"
               variant="outline"

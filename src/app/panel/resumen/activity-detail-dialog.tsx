@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { ListTree } from "lucide-react";
+import { ListTree, Pencil } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Table,
   TableBody,
@@ -27,6 +29,8 @@ export interface SessionEntry {
   startTime: string;
   endTime: string | null;
   durationSeconds: number;
+  ajustadoManualmente: boolean;
+  notaAjuste: string | null;
 }
 
 function formatDate(iso: string) {
@@ -74,6 +78,7 @@ export function ActivityDetailDialog({
               <TableHead>Fecha</TableHead>
               <TableHead>Horario</TableHead>
               <TableHead className="text-right">Duración</TableHead>
+              <TableHead>Estado</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -85,6 +90,28 @@ export function ActivityDetailDialog({
                 </TableCell>
                 <TableCell className="text-right font-mono">
                   {formatDurationShort(s.durationSeconds)}
+                </TableCell>
+                <TableCell>
+                  {s.ajustadoManualmente ? (
+                    s.notaAjuste ? (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Badge variant="warning" className="cursor-default gap-1">
+                            <Pencil className="h-3 w-3" />
+                            Ajustado
+                          </Badge>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs">{s.notaAjuste}</TooltipContent>
+                      </Tooltip>
+                    ) : (
+                      <Badge variant="warning" className="gap-1">
+                        <Pencil className="h-3 w-3" />
+                        Ajustado
+                      </Badge>
+                    )
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
                 </TableCell>
               </TableRow>
             ))}

@@ -1,6 +1,9 @@
 "use client";
 
+import { Pencil } from "lucide-react";
+
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { formatDurationShort } from "@/lib/format";
 
@@ -11,6 +14,8 @@ export interface CalendarSession {
   startTime: string;
   endTime: string | null;
   durationSeconds: number;
+  ajustadoManualmente: boolean;
+  notaAjuste: string | null;
 }
 
 function formatClock(iso: string) {
@@ -61,15 +66,22 @@ export function MonthCalendar({
           const dateKey = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
           const sessions = sessionsByDay.get(dateKey) ?? [];
           const totalSeconds = sessions.reduce((sum, s) => sum + s.durationSeconds, 0);
+          const hasAdjusted = sessions.some((s) => s.ajustadoManualmente);
 
           const cellContent = (
             <div
               className={cn(
-                "flex min-h-20 flex-col gap-1 border-b border-r p-2 text-left transition-colors",
+                "relative flex min-h-20 flex-col gap-1 border-b border-r p-2 text-left transition-colors",
                 sessions.length > 0 ? "cursor-pointer hover:bg-accent/5" : "cursor-default",
                 isToday(day) && "bg-accent/10"
               )}
             >
+              {hasAdjusted && (
+                <Pencil
+                  className="absolute right-1.5 top-1.5 h-3 w-3 text-warning-foreground"
+                  aria-label="Tiene sesiones ajustadas manualmente"
+                />
+              )}
               <span
                 className={cn(
                   "text-xs font-medium",
@@ -108,7 +120,15 @@ export function MonthCalendar({
                 <div className="space-y-2">
                   {sessions.map((s) => (
                     <div key={s.id} className="rounded-md border px-3 py-2 text-sm">
-                      <p className="font-medium">{s.clientNombre}</p>
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="font-medium">{s.clientNombre}</p>
+                        {s.ajustadoManualmente && (
+                          <Badge variant="warning" className="gap-1 shrink-0">
+                            <Pencil className="h-3 w-3" />
+                            Ajustado
+                          </Badge>
+                        )}
+                      </div>
                       <p className="text-muted-foreground">{s.activityNombre}</p>
                       <p className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
                         <span>
@@ -117,6 +137,11 @@ export function MonthCalendar({
                         </span>
                         <span className="font-mono">{formatDurationShort(s.durationSeconds)}</span>
                       </p>
+                      {s.ajustadoManualmente && s.notaAjuste && (
+                        <p className="mt-1 border-t pt-1 text-xs italic text-muted-foreground">
+                          Nota: {s.notaAjuste}
+                        </p>
+                      )}
                     </div>
                   ))}
                 </div>

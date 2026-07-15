@@ -180,6 +180,13 @@ export function TimerPanel({
             setStaleUnresolved(false);
             setActiveEntry(null);
           }}
+          onKeepRunning={() => {
+            // No se llama a ningún RPC: el timer sigue exactamente igual,
+            // solo se descarta el modal. Si sigue activo pasados otros 5
+            // minutos y la colaboradora recarga de nuevo, volverá a
+            // aparecer — es el comportamiento esperado.
+            setStaleUnresolved(false);
+          }}
         />
       )}
 
