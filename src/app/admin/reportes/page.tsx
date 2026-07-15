@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { bogotaDateKey, bogotaMonthKey } from "@/lib/dates";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
@@ -28,19 +29,17 @@ interface EntryRow {
   } | null;
 }
 
-function toDateInputValue(d: Date) {
-  return d.toISOString().slice(0, 10);
-}
-
-// Lunes de la semana calendario a la que pertenece la fecha, como clave
-// para agrupar horas por semana ISO (aunque el rango elegido no calce
-// exacto con semanas completas).
+// Lunes de la semana calendario (hora Bogotá) a la que pertenece la
+// fecha, como clave para agrupar horas por semana ISO (aunque el rango
+// elegido no calce exacto con semanas completas). Se opera sobre el
+// Y-M-D ya resuelto en hora Bogotá, usando UTC solo como calendario
+// neutro para la aritmética de días — no representa un instante real.
 function mondayOfWeek(d: Date) {
-  const date = new Date(d);
-  const day = date.getDay();
-  const diff = (day === 0 ? -6 : 1) - day;
-  date.setDate(date.getDate() + diff);
-  date.setHours(0, 0, 0, 0);
+  const [y, m, day] = bogotaDateKey(d).split("-").map(Number);
+  const date = new Date(Date.UTC(y, m - 1, day));
+  const dow = date.getUTCDay();
+  const diff = (dow === 0 ? -6 : 1) - dow;
+  date.setUTCDate(date.getUTCDate() + diff);
   return date.toISOString().slice(0, 10);
 }
 
@@ -49,15 +48,11 @@ export default async function ReportesPage({
 }: {
   searchParams: { from?: string; to?: string };
 }) {
-  const now = new Date();
-  const defaultFrom = new Date(now.getFullYear(), now.getMonth(), 1);
-  const defaultTo = now;
+  const fromStr = searchParams.from ?? `${bogotaMonthKey()}-01`;
+  const toStr = searchParams.to ?? bogotaDateKey(new Date());
 
-  const fromStr = searchParams.from ?? toDateInputValue(defaultFrom);
-  const toStr = searchParams.to ?? toDateInputValue(defaultTo);
-
-  const fromDate = new Date(`${fromStr}T00:00:00`);
-  const toDate = new Date(`${toStr}T23:59:59.999`);
+  const fromDate = new Date(`${fromStr}T00:00:00-05:00`);
+  const toDate = new Date(`${toStr}T23:59:59.999-05:00`);
 
   const supabase = createClient();
   const { data: raw } = await supabase

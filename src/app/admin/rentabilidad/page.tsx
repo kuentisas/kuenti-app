@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { bogotaMonthKey, endOfBogotaMonth, startOfBogotaMonth } from "@/lib/dates";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -44,13 +45,11 @@ export default async function RentabilidadPage({
 }: {
   searchParams: { mes?: string };
 }) {
-  const now = new Date();
-  const defaultMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-  const mesStr = searchParams.mes ?? defaultMonth;
+  const mesStr = searchParams.mes ?? bogotaMonthKey();
   const [year, month] = mesStr.split("-").map(Number);
 
-  const monthStart = new Date(year, month - 1, 1);
-  const monthEnd = new Date(year, month, 0, 23, 59, 59, 999);
+  const monthStart = startOfBogotaMonth(mesStr);
+  const monthEnd = endOfBogotaMonth(mesStr);
 
   const supabase = createClient();
 

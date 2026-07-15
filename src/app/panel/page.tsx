@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
+import { bogotaMonthKey, startOfBogotaDay } from "@/lib/dates";
 import { TimerPanel, type AssignedClient, type TodayEntry } from "./timer-panel";
 
 interface AssignmentRow {
@@ -53,7 +54,7 @@ export default async function PanelPage() {
     )
     .eq("user_id", user.id);
 
-  const currentMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}-01`;
+  const currentMonth = `${bogotaMonthKey()}-01`;
 
   // Además de activo, una actividad solo es utilizable (aparece con botón
   // Start) si está aprobada y, si es eventual, si corresponde al mes
@@ -87,8 +88,7 @@ export default async function PanelPage() {
 
   const activeEntry = activeEntryRaw as unknown as ActiveEntryRow | null;
 
-  const startOfDay = new Date();
-  startOfDay.setHours(0, 0, 0, 0);
+  const startOfDay = startOfBogotaDay();
 
   const { data: todayEntriesRaw } = await supabase
     .from("time_entries")

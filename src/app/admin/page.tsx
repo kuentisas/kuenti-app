@@ -1,6 +1,7 @@
 import { Users, Clock, Activity, Lightbulb, Pencil, AlertTriangle } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
+import { BOGOTA_TZ, startOfBogotaDay } from "@/lib/dates";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -60,8 +61,7 @@ interface AutoClosedRow {
 export default async function AdminDashboardPage() {
   const supabase = createClient();
 
-  const startOfDay = new Date();
-  startOfDay.setHours(0, 0, 0, 0);
+  const startOfDay = startOfBogotaDay();
 
   const { data: todayEntries } = await supabase
     .from("time_entries")
@@ -111,6 +111,7 @@ export default async function AdminDashboardPage() {
 
   function formatDateTime(iso: string) {
     return new Date(iso).toLocaleString("es-CO", {
+      timeZone: BOGOTA_TZ,
       day: "numeric",
       month: "short",
       hour: "2-digit",
@@ -125,6 +126,7 @@ export default async function AdminDashboardPage() {
         <h1 className="text-2xl font-semibold text-kuenti-slate">Dashboard</h1>
         <p className="text-sm text-muted-foreground">
           Resumen de actividad de hoy, {new Date().toLocaleDateString("es-CO", {
+            timeZone: BOGOTA_TZ,
             weekday: "long",
             day: "numeric",
             month: "long",
@@ -214,6 +216,7 @@ export default async function AdminDashboardPage() {
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {new Date(timer.start_time).toLocaleTimeString("es-CO", {
+                      timeZone: BOGOTA_TZ,
                       hour: "2-digit",
                       minute: "2-digit",
                     })}

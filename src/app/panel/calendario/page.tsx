@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
+import { BOGOTA_TZ, bogotaDateKey, bogotaMonthKey, endOfBogotaMonth, startOfBogotaMonth } from "@/lib/dates";
 import { MonthForm } from "@/components/month-form";
 import { MonthCalendar, type CalendarSession } from "@/components/month-calendar";
 
@@ -25,13 +26,11 @@ export default async function CalendarioPage({
 
   if (!user) redirect("/login");
 
-  const now = new Date();
-  const defaultMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-  const mesStr = searchParams.mes ?? defaultMonth;
+  const mesStr = searchParams.mes ?? bogotaMonthKey();
   const [year, month] = mesStr.split("-").map(Number);
 
-  const monthStart = new Date(year, month - 1, 1);
-  const monthEnd = new Date(year, month, 0, 23, 59, 59, 999);
+  const monthStart = startOfBogotaMonth(mesStr);
+  const monthEnd = endOfBogotaMonth(mesStr);
 
   const { data: raw } = await supabase
     .from("time_entries")
@@ -45,10 +44,7 @@ export default async function CalendarioPage({
 
   const sessionsByDay = new Map<string, CalendarSession[]>();
   for (const e of entries) {
-    const d = new Date(e.start_time);
-    const dateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
-      d.getDate()
-    ).padStart(2, "0")}`;
+    const dateKey = bogotaDateKey(e.start_time);
     const list = sessionsByDay.get(dateKey) ?? [];
     list.push({
       id: e.id,
@@ -61,7 +57,11 @@ export default async function CalendarioPage({
     sessionsByDay.set(dateKey, list);
   }
 
-  const mesNombre = monthStart.toLocaleDateString("es-CO", { month: "long", year: "numeric" });
+  const mesNombre = monthStart.toLocaleDateString("es-CO", {
+    timeZone: BOGOTA_TZ,
+    month: "long",
+    year: "numeric",
+  });
 
   return (
     <div className="space-y-6">

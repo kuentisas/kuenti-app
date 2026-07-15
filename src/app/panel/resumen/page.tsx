@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
+import { BOGOTA_TZ, endOfBogotaMonth, startOfBogotaMonth } from "@/lib/dates";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
@@ -31,9 +32,8 @@ export default async function ResumenMesPage() {
 
   if (!user) redirect("/login");
 
-  const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+  const monthStart = startOfBogotaMonth();
+  const monthEnd = endOfBogotaMonth();
 
   const { data: raw } = await supabase
     .from("time_entries")
@@ -82,7 +82,11 @@ export default async function ResumenMesPage() {
     .map(([id, row]) => ({ id, ...row }))
     .sort((a, b) => b.seconds - a.seconds);
 
-  const mesNombre = now.toLocaleDateString("es-CO", { month: "long", year: "numeric" });
+  const mesNombre = monthStart.toLocaleDateString("es-CO", {
+    timeZone: BOGOTA_TZ,
+    month: "long",
+    year: "numeric",
+  });
 
   return (
     <div className="space-y-6">
