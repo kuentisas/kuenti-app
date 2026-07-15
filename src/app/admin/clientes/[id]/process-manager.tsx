@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useId, useState, useTransition } from "react";
 import { Loader2, Plus, Pencil, Trash2, GripVertical } from "lucide-react";
 import {
   DndContext,
@@ -220,6 +220,10 @@ export function ProcessManager({
   }, [activities]);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
+  // dnd-kit genera ids internos (aria-describedby, etc.) con un contador
+  // que no coincide entre el render del servidor y la hidratación en el
+  // cliente si no se le pasa un id estable — React.useId() sí lo es.
+  const dndId = useId();
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
@@ -291,7 +295,12 @@ export function ProcessManager({
           </p>
         </div>
       ) : (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <DndContext
+          id={dndId}
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
           <SortableContext items={items.map((a) => a.id)} strategy={verticalListSortingStrategy}>
             <div className="divide-y rounded-md border">
               {items.map((activity) => (
