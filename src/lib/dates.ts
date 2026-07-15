@@ -48,3 +48,14 @@ export function endOfBogotaMonth(monthKey?: string): Date {
   nextMonthStart.setUTCMonth(nextMonthStart.getUTCMonth() + 1);
   return new Date(nextMonthStart.getTime() - 1);
 }
+
+// Convierte el valor crudo de un <input type="datetime-local"> (sin
+// offset, "YYYY-MM-DDTHH:MM:SS") al instante UTC correcto asumiendo que
+// la hora escrita es hora de Bogotá. Sin esto, un Server Action que hace
+// `new Date(value)` la interpreta con la zona del servidor (UTC en
+// Vercel), corriendo la hora 5 horas — bug real: una hora de fin válida
+// (ej. 11:36pm, dentro del rango del timer) terminaba pareciendo horas
+// antes del inicio del timer y la corrección se rechazaba.
+export function bogotaDatetimeLocalToISOString(value: string): string {
+  return new Date(`${value}${BOGOTA_OFFSET}`).toISOString();
+}

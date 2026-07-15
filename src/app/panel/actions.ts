@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { createClient } from "@/lib/supabase/server";
+import { bogotaDatetimeLocalToISOString } from "@/lib/dates";
 
 export async function startActivity(clientId: string, activityId: string) {
   const supabase = createClient();
@@ -86,7 +87,7 @@ export async function requestCorrection(
     time_entry_id: parsed.data.timeEntryId,
     user_id: (await supabase.auth.getUser()).data.user?.id ?? "",
     motivo: parsed.data.motivo,
-    nueva_hora_fin_sugerida: new Date(parsed.data.nuevaHoraFin).toISOString(),
+    nueva_hora_fin_sugerida: bogotaDatetimeLocalToISOString(parsed.data.nuevaHoraFin),
   });
 
   if (error) return { error: error.message };
@@ -115,7 +116,7 @@ export async function resolveStaleTimer(
   const { error } = await supabase.rpc("resolve_stale_timer", {
     p_choice: parsed.data.choice,
     p_actual_end_time: parsed.data.actualEndTime
-      ? new Date(parsed.data.actualEndTime).toISOString()
+      ? bogotaDatetimeLocalToISOString(parsed.data.actualEndTime)
       : null,
     p_nota_ajuste: parsed.data.nota ?? null,
   });
