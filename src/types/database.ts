@@ -122,6 +122,9 @@ export interface Database {
           sugerida_por: string | null;
           motivo: string | null;
           orden: number;
+          revisado_por: string | null;
+          fecha_revision: string | null;
+          nota_revision: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -136,6 +139,9 @@ export interface Database {
           sugerida_por?: string | null;
           motivo?: string | null;
           orden?: number;
+          revisado_por?: string | null;
+          fecha_revision?: string | null;
+          nota_revision?: string | null;
         };
         Update: {
           client_id?: string;
@@ -145,6 +151,9 @@ export interface Database {
           mes_aplicable?: string | null;
           estado_aprobacion?: EstadoAprobacion;
           orden?: number;
+          revisado_por?: string | null;
+          fecha_revision?: string | null;
+          nota_revision?: string | null;
         };
         Relationships: [
           {

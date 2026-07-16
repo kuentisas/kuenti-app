@@ -13,6 +13,7 @@ import {
   Clock,
   CalendarRange,
   CalendarDays,
+  History,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -30,6 +31,7 @@ const ADMIN_NAV: NavItem[] = [
   { href: "/admin/reportes", label: "Reportes", icon: BarChart3 },
   { href: "/admin/rentabilidad", label: "Rentabilidad", icon: TrendingUp },
   { href: "/admin/calendario", label: "Calendario", icon: CalendarDays },
+  { href: "/admin/aprobaciones", label: "Aprobaciones", icon: History },
   { href: "/admin/clientes", label: "Clientes", icon: Building2 },
   { href: "/admin/usuarios", label: "Equipo", icon: Users },
 ];

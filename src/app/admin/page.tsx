@@ -18,6 +18,7 @@ import { RealtimeRefresher } from "@/components/realtime-refresher";
 import { formatDurationShort } from "@/lib/format";
 import { ActivityApprovalActions } from "./activity-approval-actions";
 import { CorrectionApprovalActions } from "./correction-approval-actions";
+import { AdjustmentsColaboradoraSelect } from "./adjustments-colaboradora-select";
 
 interface ActiveTimerRow {
   id: string;
@@ -72,13 +73,14 @@ interface ManualAdjustmentRow {
 export default async function AdminDashboardPage({
   searchParams,
 }: {
-  searchParams: { mes?: string };
+  searchParams: { mes?: string; colaborador?: string };
 }) {
   const supabase = createClient();
 
   const mesAjustesStr = searchParams.mes ?? bogotaMonthKey();
   const ajustesMonthStart = startOfBogotaMonth(mesAjustesStr);
   const ajustesMonthEnd = endOfBogotaMonth(mesAjustesStr);
+  const colaboradorFiltroId = searchParams.colaborador ?? "";
 
   const startOfDay = startOfBogotaDay();
 
@@ -128,7 +130,15 @@ export default async function AdminDashboardPage({
 
   const autoClosed = (autoClosedRaw ?? []) as unknown as AutoClosedRow[];
 
-  const { data: manualAdjustmentsRaw } = await supabase
+  const { data: colaboradorasParaFiltro } = await supabase
+    .from("users")
+    .select("id, nombre")
+    .eq("role", "colaboradora")
+    .eq("activo", true)
+    .is("deleted_at", null)
+    .order("nombre");
+
+  let manualAdjustmentsQuery = supabase
     .from("time_entries")
     .select("id, start_time, end_time, nota_ajuste, users(nombre), clients(nombre), activities(nombre)")
     .eq("estado", "ajustado_manualmente")
@@ -136,6 +146,12 @@ export default async function AdminDashboardPage({
     .lte("start_time", ajustesMonthEnd.toISOString())
     .order("start_time", { ascending: false })
     .limit(200);
+
+  if (colaboradorFiltroId) {
+    manualAdjustmentsQuery = manualAdjustmentsQuery.eq("user_id", colaboradorFiltroId);
+  }
+
+  const { data: manualAdjustmentsRaw } = await manualAdjustmentsQuery;
 
   const manualAdjustments = (manualAdjustmentsRaw ?? []) as unknown as ManualAdjustmentRow[];
 
@@ -418,7 +434,17 @@ export default async function AdminDashboardPage({
             <Pencil className="h-4 w-4 text-warning-foreground" />
             Ajustes manuales — {mesAjustesNombre}
           </CardTitle>
-          <MonthForm defaultMonth={mesAjustesStr} basePath="/admin" />
+          <div className="flex flex-wrap items-end gap-3">
+            <MonthForm
+              defaultMonth={mesAjustesStr}
+              basePath="/admin"
+              extraParams={colaboradorFiltroId ? { colaborador: colaboradorFiltroId } : undefined}
+            />
+            <AdjustmentsColaboradoraSelect
+              colaboradoras={colaboradorasParaFiltro ?? []}
+              selectedId={colaboradorFiltroId}
+            />
+          </div>
         </CardHeader>
         <CardContent className="p-0">
           <Table>
@@ -436,7 +462,11 @@ export default async function AdminDashboardPage({
               {manualAdjustments.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center text-muted-foreground">
-                    No hay ajustes manuales en {mesAjustesNombre}.
+                    No hay ajustes manuales en {mesAjustesNombre}
+                    {colaboradorFiltroId
+                      ? ` para ${colaboradorasParaFiltro?.find((c) => c.id === colaboradorFiltroId)?.nombre ?? "esta colaboradora"}`
+                      : ""}
+                    .
                   </TableCell>
                 </TableRow>
               )}
