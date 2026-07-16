@@ -5,11 +5,12 @@ import { z } from "zod";
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { requireRole } from "@/lib/require-role";
 
 const createMemberSchema = z.object({
   nombre: z.string().trim().min(1, "El nombre es requerido"),
   email: z.string().trim().email("Correo inválido"),
-  role: z.enum(["admin", "colaboradora"]),
+  role: z.enum(["admin", "supervisor", "colaboradora"]),
   password: z.string().min(8, "La contraseña debe tener al menos 8 caracteres"),
   debeCambiarPassword: z.boolean(),
 });
@@ -19,7 +20,17 @@ const createMemberSchema = z.object({
 // configuración de Site URL/Redirect URLs de Supabase Auth. Con
 // debeCambiarPassword=true, el middleware obliga a cambiarla en el primer
 // inicio de sesión.
+//
+// Usa el cliente admin (service role), que bypasea RLS por completo —
+// por eso la verificación de rol de quien llama vive acá adentro, no
+// solo en que /admin/usuarios esté bloqueado por el middleware. Un
+// supervisor puede crear miembros, pero únicamente con role=colaboradora
+// (nunca otro supervisor ni admin), sin importar qué haya mandado el
+// formulario — se fuerza server-side, la UI solo evita mostrarlo.
 export async function createTeamMember(formData: FormData) {
+  const guard = await requireRole(["admin", "supervisor"]);
+  if ("error" in guard) return guard;
+
   const parsed = createMemberSchema.safeParse({
     nombre: formData.get("nombre"),
     email: formData.get("email"),
@@ -30,6 +41,10 @@ export async function createTeamMember(formData: FormData) {
 
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Datos inválidos" };
+  }
+
+  if (guard.profile.role === "supervisor" && parsed.data.role !== "colaboradora") {
+    return { error: "Un supervisor solo puede crear miembros del equipo." };
   }
 
   let adminClient;
@@ -82,6 +97,9 @@ export async function resetUserPassword(
   password: string,
   debeCambiarPassword: boolean
 ) {
+  const guard = await requireRole(["admin", "supervisor"]);
+  if ("error" in guard) return guard;
+
   const parsed = resetPasswordSchema.safeParse({ userId, password, debeCambiarPassword });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Datos inválidos" };
@@ -115,6 +133,9 @@ export async function resetUserPassword(
 }
 
 export async function deactivateUser(userId: string) {
+  const guard = await requireRole(["admin", "supervisor"]);
+  if ("error" in guard) return guard;
+
   const supabase = createClient();
   const {
     data: { user: currentUser },
@@ -139,6 +160,9 @@ export async function deactivateUser(userId: string) {
 }
 
 export async function reactivateUser(userId: string) {
+  const guard = await requireRole(["admin", "supervisor"]);
+  if ("error" in guard) return guard;
+
   const supabase = createClient();
   const { error } = await supabase
     .from("users")
@@ -158,7 +182,12 @@ export async function reactivateUser(userId: string) {
   return { error: null };
 }
 
+// Exclusivo admin — a diferencia del resto de las acciones de esta
+// tabla, un supervisor no puede eliminar usuarios.
 export async function deleteUser(userId: string) {
+  const guard = await requireRole(["admin"]);
+  if ("error" in guard) return guard;
+
   const supabase = createClient();
   const {
     data: { user: currentUser },

@@ -66,11 +66,18 @@ export async function updateClientRecord(clientId: string, formData: FormData) {
 
   if (error) return { error: error.message };
 
-  const { error: rateError } = await supabase
-    .from("client_rates")
-    .update({ tarifa_mensual: parsed.data.tarifa_mensual ?? null })
-    .eq("client_id", clientId);
-  if (rateError) return { error: rateError.message };
+  // El campo tarifa_mensual no existe en el DOM del formulario para un
+  // supervisor (ver ClientFormDialog) — formData.has() distingue eso de
+  // "el admin la borró" (el input sigue presente con valor vacío). Sin
+  // este chequeo, un supervisor editando nombre/NIT le pondría null a
+  // la tarifa de cualquier cliente sin querer.
+  if (formData.has("tarifa_mensual")) {
+    const { error: rateError } = await supabase
+      .from("client_rates")
+      .update({ tarifa_mensual: parsed.data.tarifa_mensual ?? null })
+      .eq("client_id", clientId);
+    if (rateError) return { error: rateError.message };
+  }
 
   revalidatePath("/admin/clientes");
   revalidatePath(`/admin/clientes/${clientId}`);

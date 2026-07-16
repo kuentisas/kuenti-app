@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUserProfile } from "@/lib/current-user";
+import { canViewFinance, isAdmin } from "@/lib/roles";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
@@ -17,6 +19,11 @@ import { SalaryDialog } from "./salary-dialog";
 import { ResetPasswordDialog } from "./reset-password-dialog";
 
 export default async function UsuariosPage() {
+  const profile = await getCurrentUserProfile();
+  const canSeeSalario = canViewFinance(profile?.role ?? "colaboradora");
+  const canDelete = isAdmin(profile?.role ?? "colaboradora");
+  const callerRole = profile?.role ?? "colaboradora";
+
   const supabase = createClient();
 
   const [{ data: usersRaw }, { data: assignments }] = await Promise.all([
@@ -58,7 +65,7 @@ export default async function UsuariosPage() {
             conserva siempre.
           </p>
         </div>
-        <InviteDialog />
+        <InviteDialog callerRole={callerRole} />
       </div>
 
       <Card>
@@ -70,7 +77,7 @@ export default async function UsuariosPage() {
                 <TableHead>Correo</TableHead>
                 <TableHead>Rol</TableHead>
                 <TableHead>Estado</TableHead>
-                <TableHead className="text-right">Salario</TableHead>
+                {canSeeSalario && <TableHead className="text-right">Salario</TableHead>}
                 <TableHead className="text-right">Clientes asignados</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
@@ -78,7 +85,10 @@ export default async function UsuariosPage() {
             <TableBody>
               {users.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground">
+                  <TableCell
+                    colSpan={canSeeSalario ? 7 : 6}
+                    className="text-center text-muted-foreground"
+                  >
                     Aún no hay usuarios.
                   </TableCell>
                 </TableRow>
@@ -93,7 +103,11 @@ export default async function UsuariosPage() {
                     <TableCell className="text-muted-foreground">{u.email}</TableCell>
                     <TableCell>
                       <Badge variant={u.role === "admin" ? "default" : "secondary"}>
-                        {u.role === "admin" ? "Admin" : "Miembro"}
+                        {u.role === "admin"
+                          ? "Admin"
+                          : u.role === "supervisor"
+                            ? "Supervisor"
+                            : "Miembro"}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -105,24 +119,26 @@ export default async function UsuariosPage() {
                         <Badge variant="secondary">Inactiva</Badge>
                       )}
                     </TableCell>
-                    <TableCell className="text-right">
-                      {u.role === "colaboradora" ? (
-                        <div className="flex items-center justify-end gap-1">
-                          <span className="font-mono text-sm">
-                            {u.salario_mensual != null ? formatCOP(u.salario_mensual) : "—"}
-                          </span>
-                          {!u.deleted_at && (
-                            <SalaryDialog
-                              userId={u.id}
-                              nombre={u.nombre}
-                              currentSalary={u.salario_mensual}
-                            />
-                          )}
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
+                    {canSeeSalario && (
+                      <TableCell className="text-right">
+                        {u.role === "colaboradora" ? (
+                          <div className="flex items-center justify-end gap-1">
+                            <span className="font-mono text-sm">
+                              {u.salario_mensual != null ? formatCOP(u.salario_mensual) : "—"}
+                            </span>
+                            {!u.deleted_at && (
+                              <SalaryDialog
+                                userId={u.id}
+                                nombre={u.nombre}
+                                currentSalary={u.salario_mensual}
+                              />
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                    )}
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
                         {clientCount}
@@ -146,6 +162,7 @@ export default async function UsuariosPage() {
                           nombre={u.nombre}
                           activo={u.activo}
                           deleted={!!u.deleted_at}
+                          canDelete={canDelete}
                         />
                       </div>
                     </TableCell>

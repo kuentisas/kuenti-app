@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUserProfile } from "@/lib/current-user";
+import { canViewFinance } from "@/lib/roles";
 import { bogotaDateKey, bogotaMonthKey } from "@/lib/dates";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -48,6 +50,9 @@ export default async function ReportesPage({
 }: {
   searchParams: { from?: string; to?: string };
 }) {
+  const profile = await getCurrentUserProfile();
+  const canSeeEficiencia = canViewFinance(profile?.role ?? "colaboradora");
+
   const fromStr = searchParams.from ?? `${bogotaMonthKey()}-01`;
   const toStr = searchParams.to ?? bogotaDateKey(new Date());
 
@@ -135,7 +140,7 @@ export default async function ReportesPage({
         <TabsList>
           <TabsTrigger value="cliente">Por cliente</TabsTrigger>
           <TabsTrigger value="colaboradora">Por miembro del equipo</TabsTrigger>
-          <TabsTrigger value="eficiencia">Costo y eficiencia</TabsTrigger>
+          {canSeeEficiencia && <TabsTrigger value="eficiencia">Costo y eficiencia</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="cliente">
@@ -220,6 +225,7 @@ export default async function ReportesPage({
           </Card>
         </TabsContent>
 
+        {canSeeEficiencia && (
         <TabsContent value="eficiencia">
           <Card>
             <CardContent className="p-0">
@@ -273,6 +279,7 @@ export default async function ReportesPage({
             </CardContent>
           </Card>
         </TabsContent>
+        )}
       </Tabs>
     </div>
   );

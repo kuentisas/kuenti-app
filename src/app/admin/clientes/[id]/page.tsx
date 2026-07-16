@@ -3,6 +3,8 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUserProfile } from "@/lib/current-user";
+import { canViewFinance } from "@/lib/roles";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ClientFormDialog } from "../client-form-dialog";
 import { ActivoSwitch } from "../activo-switch";
@@ -14,6 +16,9 @@ export default async function ClientDetailPage({
 }: {
   params: { id: string };
 }) {
+  const profile = await getCurrentUserProfile();
+  const canSeeTarifa = canViewFinance(profile?.role ?? "colaboradora");
+
   const supabase = createClient();
 
   const { data: clientRaw } = await supabase
@@ -75,7 +80,7 @@ export default async function ClientDetailPage({
             Activo
             <ActivoSwitch clientId={client.id} activo={client.activo} />
           </div>
-          <ClientFormDialog mode="edit" client={client} />
+          <ClientFormDialog mode="edit" client={client} canEditTarifa={canSeeTarifa} />
         </div>
       </div>
 

@@ -20,9 +20,13 @@ import { createClientRecord, updateClientRecord } from "./actions";
 interface ClientFormDialogProps {
   mode: "create" | "edit";
   client?: { id: string; nombre: string; nit: string | null; tarifa_mensual: number };
+  // false para supervisor: el campo de tarifa queda ausente del DOM, no
+  // solo oculto — RLS de client_rates lo bloquearía igual, pero acá se
+  // evita mostrarlo desde el vamos.
+  canEditTarifa?: boolean;
 }
 
-export function ClientFormDialog({ mode, client }: ClientFormDialogProps) {
+export function ClientFormDialog({ mode, client, canEditTarifa = true }: ClientFormDialogProps) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
@@ -79,18 +83,20 @@ export function ClientFormDialog({ mode, client }: ClientFormDialogProps) {
             <Label htmlFor="nit">NIT (opcional)</Label>
             <Input id="nit" name="nit" defaultValue={client?.nit ?? ""} placeholder="900.123.456-7" />
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="tarifa_mensual">Tarifa mensual (COP, opcional)</Label>
-            <Input
-              id="tarifa_mensual"
-              name="tarifa_mensual"
-              type="number"
-              min="0"
-              step="1000"
-              placeholder="Sin definir"
-              defaultValue={client?.tarifa_mensual || undefined}
-            />
-          </div>
+          {canEditTarifa && (
+            <div className="space-y-1.5">
+              <Label htmlFor="tarifa_mensual">Tarifa mensual (COP, opcional)</Label>
+              <Input
+                id="tarifa_mensual"
+                name="tarifa_mensual"
+                type="number"
+                min="0"
+                step="1000"
+                placeholder="Sin definir"
+                defaultValue={client?.tarifa_mensual || undefined}
+              />
+            </div>
+          )}
           <DialogFooter>
             <Button type="submit" disabled={isPending} className="gap-2">
               {isPending && <Loader2 className="h-4 w-4 animate-spin" />}

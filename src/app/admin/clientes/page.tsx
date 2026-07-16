@@ -2,6 +2,8 @@ import Link from "next/link";
 import { ExternalLink } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUserProfile } from "@/lib/current-user";
+import { canViewFinance } from "@/lib/roles";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
@@ -16,6 +18,9 @@ import { ClientFormDialog } from "./client-form-dialog";
 import { ActivoSwitch } from "./activo-switch";
 
 export default async function ClientesPage() {
+  const profile = await getCurrentUserProfile();
+  const canSeeTarifa = canViewFinance(profile?.role ?? "colaboradora");
+
   const supabase = createClient();
   const { data: clientsRaw } = await supabase
     .from("clients")
@@ -40,7 +45,7 @@ export default async function ClientesPage() {
             Gestiona los clientes de la firma, su tarifa mensual y sus procesos.
           </p>
         </div>
-        <ClientFormDialog mode="create" />
+        <ClientFormDialog mode="create" canEditTarifa={canSeeTarifa} />
       </div>
 
       <Card>
@@ -50,7 +55,7 @@ export default async function ClientesPage() {
               <TableRow>
                 <TableHead>Nombre</TableHead>
                 <TableHead>NIT</TableHead>
-                <TableHead className="text-right">Tarifa mensual</TableHead>
+                {canSeeTarifa && <TableHead className="text-right">Tarifa mensual</TableHead>}
                 <TableHead>Activo</TableHead>
                 <TableHead className="text-right">Editar</TableHead>
                 <TableHead className="text-right">Detalle</TableHead>
@@ -59,7 +64,10 @@ export default async function ClientesPage() {
             <TableBody>
               {(clients ?? []).length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground">
+                  <TableCell
+                    colSpan={canSeeTarifa ? 6 : 5}
+                    className="text-center text-muted-foreground"
+                  >
                     Aún no hay clientes. Crea el primero.
                   </TableCell>
                 </TableRow>
@@ -68,14 +76,16 @@ export default async function ClientesPage() {
                 <TableRow key={client.id}>
                   <TableCell className="font-medium">{client.nombre}</TableCell>
                   <TableCell className="text-muted-foreground">{client.nit ?? "—"}</TableCell>
-                  <TableCell className="text-right font-mono">
-                    {client.tarifa_mensual > 0 ? formatCOP(client.tarifa_mensual) : "—"}
-                  </TableCell>
+                  {canSeeTarifa && (
+                    <TableCell className="text-right font-mono">
+                      {client.tarifa_mensual > 0 ? formatCOP(client.tarifa_mensual) : "—"}
+                    </TableCell>
+                  )}
                   <TableCell>
                     <ActivoSwitch clientId={client.id} activo={client.activo} />
                   </TableCell>
                   <TableCell className="text-right">
-                    <ClientFormDialog mode="edit" client={client} />
+                    <ClientFormDialog mode="edit" client={client} canEditTarifa={canSeeTarifa} />
                   </TableCell>
                   <TableCell className="text-right">
                     <Link

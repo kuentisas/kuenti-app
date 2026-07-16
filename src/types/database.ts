@@ -1,4 +1,4 @@
-export type Role = "admin" | "colaboradora";
+export type Role = "admin" | "supervisor" | "colaboradora";
 export type ActivityTipo = "recurrente" | "eventual";
 export type EstadoAprobacion = "aprobada" | "pendiente" | "rechazada";
 export type TimeEntryEstado =

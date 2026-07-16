@@ -36,6 +36,12 @@ const ADMIN_NAV: NavItem[] = [
   { href: "/admin/usuarios", label: "Equipo", icon: Users },
 ];
 
+// Igual que ADMIN_NAV, sin Rentabilidad — expone tarifas/salarios, que
+// el supervisor no puede ver (bloqueado también en el middleware).
+const SUPERVISOR_NAV: NavItem[] = ADMIN_NAV.filter(
+  (item) => item.href !== "/admin/rentabilidad"
+);
+
 const COLABORADORA_NAV: NavItem[] = [
   { href: "/panel", label: "Mis clientes", icon: Clock },
   { href: "/panel/resumen", label: "Resumen del mes", icon: CalendarRange },
@@ -47,12 +53,13 @@ export function AppShell({
   nombre,
   children,
 }: {
-  role: "admin" | "colaboradora";
+  role: "admin" | "supervisor" | "colaboradora";
   nombre: string;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const nav = role === "admin" ? ADMIN_NAV : COLABORADORA_NAV;
+  const nav =
+    role === "admin" ? ADMIN_NAV : role === "supervisor" ? SUPERVISOR_NAV : COLABORADORA_NAV;
 
   return (
     <div className="flex min-h-screen bg-kuenti-bg">

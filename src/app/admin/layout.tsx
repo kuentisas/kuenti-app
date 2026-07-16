@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentUserProfile } from "@/lib/current-user";
 import { AppShell } from "@/components/app-shell";
 
 export default async function AdminLayout({
@@ -8,23 +8,13 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const profile = await getCurrentUserProfile();
 
-  if (!user) redirect("/login");
-
-  const { data: profile } = await supabase
-    .from("users")
-    .select("nombre, role")
-    .eq("id", user.id)
-    .single();
-
-  if (!profile || profile.role !== "admin") redirect("/panel");
+  if (!profile) redirect("/login");
+  if (profile.role !== "admin" && profile.role !== "supervisor") redirect("/panel");
 
   return (
-    <AppShell role="admin" nombre={profile.nombre}>
+    <AppShell role={profile.role} nombre={profile.nombre}>
       {children}
     </AppShell>
   );

@@ -25,9 +25,15 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { generatePassword } from "@/lib/generate-password";
+import type { Role } from "@/types/database";
 import { createTeamMember } from "./actions";
 
-export function InviteDialog() {
+// callerRole decide qué puede ofrecer el selector de rol: un supervisor
+// solo puede crear miembros del equipo (ni siquiera se le muestra el
+// selector, para que quede claro que no hay otra opción — el server
+// además lo fuerza en createTeamMember por las dudas). Un admin puede
+// crear cualquier rol.
+export function InviteDialog({ callerRole }: { callerRole: Role }) {
   const [open, setOpen] = useState(false);
   const [role, setRole] = useState("colaboradora");
   const [password, setPassword] = useState(() => generatePassword());
@@ -36,6 +42,8 @@ export function InviteDialog() {
   const [createdEmail, setCreatedEmail] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
+
+  const canChooseRole = callerRole === "admin";
 
   function resetAndClose() {
     setOpen(false);
@@ -47,7 +55,7 @@ export function InviteDialog() {
   }
 
   function handleSubmit(formData: FormData) {
-    formData.set("role", role);
+    formData.set("role", canChooseRole ? role : "colaboradora");
     formData.set("password", password);
     formData.set("debeCambiarPassword", String(debeCambiarPassword));
     const email = String(formData.get("email") ?? "");
@@ -121,18 +129,26 @@ export function InviteDialog() {
                 <Label htmlFor="email">Correo</Label>
                 <Input id="email" name="email" type="email" required placeholder="maria@kuenti.co" />
               </div>
-              <div className="space-y-1.5">
-                <Label>Rol</Label>
-                <Select value={role} onValueChange={setRole}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="colaboradora">Miembro del equipo</SelectItem>
-                    <SelectItem value="admin">Admin (gerente)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              {canChooseRole ? (
+                <div className="space-y-1.5">
+                  <Label>Rol</Label>
+                  <Select value={role} onValueChange={setRole}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="colaboradora">Miembro del equipo</SelectItem>
+                      <SelectItem value="supervisor">Supervisor</SelectItem>
+                      <SelectItem value="admin">Admin (gerente)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  <Label>Rol</Label>
+                  <p className="text-sm text-muted-foreground">Miembro del equipo</p>
+                </div>
+              )}
               <div className="space-y-1.5">
                 <Label htmlFor="password">Contraseña temporal</Label>
                 <div className="flex gap-2">

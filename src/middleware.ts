@@ -62,7 +62,7 @@ export async function middleware(request: NextRequest) {
 
   if (isPublicPath) {
     const url = request.nextUrl.clone();
-    url.pathname = profile.role === "admin" ? "/admin" : "/panel";
+    url.pathname = profile.role === "colaboradora" ? "/panel" : "/admin";
     return NextResponse.redirect(url);
   }
 
@@ -77,11 +77,19 @@ export async function middleware(request: NextRequest) {
 
   if (!profile.debe_cambiar_password && path === CAMBIAR_PASSWORD_PATH) {
     const url = request.nextUrl.clone();
-    url.pathname = profile.role === "admin" ? "/admin" : "/panel";
+    url.pathname = profile.role === "colaboradora" ? "/panel" : "/admin";
     return NextResponse.redirect(url);
   }
 
-  if (path.startsWith("/admin") && profile.role !== "admin") {
+  // Rentabilidad expone tarifas/salarios — exclusivo admin, incluso
+  // dentro de /admin (que supervisor sí puede usar).
+  if (path.startsWith("/admin/rentabilidad") && profile.role !== "admin") {
+    const url = request.nextUrl.clone();
+    url.pathname = "/admin";
+    return NextResponse.redirect(url);
+  }
+
+  if (path.startsWith("/admin") && profile.role !== "admin" && profile.role !== "supervisor") {
     const url = request.nextUrl.clone();
     url.pathname = "/panel";
     return NextResponse.redirect(url);
