@@ -12,6 +12,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import {
   Table,
   TableBody,
   TableCell,
@@ -86,12 +92,26 @@ export function TimerPanel({
   const [snoozedUntilSeconds, setSnoozedUntilSeconds] = useState(DOS_HORAS_SEGUNDOS);
   const [adjustDialogOpen, setAdjustDialogOpen] = useState(false);
   const [staleUnresolved, setStaleUnresolved] = useState(initialIsStale);
+  // Acordeón colapsado por defecto (25+ clientes reales no caben todos
+  // expandidos en pantalla) — salvo el cliente con el timer activo, que
+  // se auto-expande para que no haya que buscarlo.
+  const [openClientIds, setOpenClientIds] = useState<string[]>(
+    initialActiveEntry ? [initialActiveEntry.clientId] : []
+  );
   const { toast } = useToast();
 
   useEffect(() => {
     setActiveEntry(initialActiveEntry);
     setSnoozedUntilSeconds(DOS_HORAS_SEGUNDOS);
   }, [initialActiveEntry]);
+
+  useEffect(() => {
+    if (activeEntry) {
+      setOpenClientIds((prev) =>
+        prev.includes(activeEntry.clientId) ? prev : [...prev, activeEntry.clientId]
+      );
+    }
+  }, [activeEntry]);
 
   useEffect(() => {
     setIsOnline(navigator.onLine);
@@ -277,68 +297,90 @@ export function TimerPanel({
             Aún no tienes clientes asignados. Contacta a tu administrador.
           </p>
         )}
-        {clients.map((client) => (
-          <Card key={client.id}>
-            <CardHeader className="border-b bg-secondary/30 py-3">
-              <CardTitle className="text-lg text-kuenti-slate">{client.nombre}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {client.activities.length === 0 && (
-                <p className="text-sm text-muted-foreground">
-                  Este cliente no tiene actividades configuradas.
-                </p>
-              )}
-              {client.activities.map((activity) => {
-                const isActiveActivity = activeEntry?.activityId === activity.id;
-                const isLoadingThis = isPending && pendingActivityId === activity.id;
-                return (
-                  <div
-                    key={activity.id}
-                    className={cn(
-                      "flex items-center justify-between rounded-md border px-4 py-3",
-                      isActiveActivity && "border-accent bg-accent/5"
+        <Accordion
+          type="multiple"
+          value={openClientIds}
+          onValueChange={setOpenClientIds}
+          className="space-y-3"
+        >
+          {clients.map((client) => {
+            const hasActiveTimer = activeEntry?.clientId === client.id;
+            return (
+              <AccordionItem
+                key={client.id}
+                value={client.id}
+                className="overflow-hidden rounded-lg border bg-card text-card-foreground shadow-sm"
+              >
+                <AccordionTrigger className="border-b bg-secondary/30 px-6 py-3">
+                  <span className="flex items-center gap-2 text-lg text-kuenti-slate">
+                    {client.nombre}
+                    {hasActiveTimer && (
+                      <span className="relative flex h-2 w-2">
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent opacity-75" />
+                        <span className="relative inline-flex h-2 w-2 rounded-full bg-accent" />
+                      </span>
                     )}
-                  >
-                    <span className="text-sm font-medium">{activity.nombre}</span>
-                    {isActiveActivity ? (
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={handleStop}
-                        disabled={isPending || !isOnline || staleUnresolved}
-                        className="gap-1.5"
-                      >
-                        {isLoadingThis ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          <Square className="h-3.5 w-3.5" />
+                  </span>
+                </AccordionTrigger>
+                <AccordionContent className="space-y-2 px-6 pb-6 pt-2">
+                  {client.activities.length === 0 && (
+                    <p className="text-sm text-muted-foreground">
+                      Este cliente no tiene actividades configuradas.
+                    </p>
+                  )}
+                  {client.activities.map((activity) => {
+                    const isActiveActivity = activeEntry?.activityId === activity.id;
+                    const isLoadingThis = isPending && pendingActivityId === activity.id;
+                    return (
+                      <div
+                        key={activity.id}
+                        className={cn(
+                          "flex items-center justify-between rounded-md border px-4 py-3",
+                          isActiveActivity && "border-accent bg-accent/5"
                         )}
-                        Detener
-                      </Button>
-                    ) : (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() =>
-                          handleStart(client.id, client.nombre, activity.id, activity.nombre)
-                        }
-                        disabled={isPending || !isOnline || staleUnresolved}
-                        className="gap-1.5"
                       >
-                        {isLoadingThis ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        <span className="text-sm font-medium">{activity.nombre}</span>
+                        {isActiveActivity ? (
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={handleStop}
+                            disabled={isPending || !isOnline || staleUnresolved}
+                            className="gap-1.5"
+                          >
+                            {isLoadingThis ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Square className="h-3.5 w-3.5" />
+                            )}
+                            Detener
+                          </Button>
                         ) : (
-                          <Play className="h-3.5 w-3.5" />
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() =>
+                              handleStart(client.id, client.nombre, activity.id, activity.nombre)
+                            }
+                            disabled={isPending || !isOnline || staleUnresolved}
+                            className="gap-1.5"
+                          >
+                            {isLoadingThis ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Play className="h-3.5 w-3.5" />
+                            )}
+                            Iniciar
+                          </Button>
                         )}
-                        Iniciar
-                      </Button>
-                    )}
-                  </div>
-                );
-              })}
-            </CardContent>
-          </Card>
-        ))}
+                      </div>
+                    );
+                  })}
+                </AccordionContent>
+              </AccordionItem>
+            );
+          })}
+        </Accordion>
       </div>
 
       <div className="space-y-3">
