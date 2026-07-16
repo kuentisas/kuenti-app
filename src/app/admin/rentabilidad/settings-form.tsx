@@ -52,9 +52,9 @@ export function SettingsForm({ initialValue }: { initialValue: number }) {
         </Button>
       </form>
       <p className="text-xs text-muted-foreground">
-        Este valor se usa únicamente como estimado para colaboradoras que aún no tienen un
-        salario mensual cargado en Equipo. Si ya cargaste el salario de una colaboradora, sus
-        cálculos de rentabilidad usan ese salario real y este campo no les aplica.
+        Este valor se usa únicamente como estimado para miembros del equipo que aún no tienen
+        un salario mensual cargado en Equipo. Si ya cargaste el salario de un miembro del
+        equipo, sus cálculos de rentabilidad usan ese salario real y este campo no le aplica.
       </p>
     </div>
   );

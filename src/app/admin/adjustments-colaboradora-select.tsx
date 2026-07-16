@@ -38,10 +38,10 @@ export function AdjustmentsColaboradoraSelect({
   return (
     <Select value={selectedId || ALL_VALUE} onValueChange={handleChange}>
       <SelectTrigger className="w-56">
-        <SelectValue placeholder="Todas las colaboradoras" />
+        <SelectValue placeholder="Todo el equipo" />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value={ALL_VALUE}>Todas las colaboradoras</SelectItem>
+        <SelectItem value={ALL_VALUE}>Todo el equipo</SelectItem>
         {colaboradoras.map((c) => (
           <SelectItem key={c.id} value={c.id}>
             {c.nombre}

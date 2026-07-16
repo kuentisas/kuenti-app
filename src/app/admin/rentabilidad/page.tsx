@@ -223,7 +223,7 @@ export default async function RentabilidadPage({
                             </Badge>
                           </TooltipTrigger>
                           <TooltipContent>
-                            Ninguna colaboradora con horas en este cliente tiene salario
+                            Ningún miembro del equipo con horas en este cliente tiene salario
                             cargado — se usó el costo hora promedio.
                           </TooltipContent>
                         </Tooltip>
@@ -236,8 +236,8 @@ export default async function RentabilidadPage({
                             </Badge>
                           </TooltipTrigger>
                           <TooltipContent>
-                            Incluye horas de colaboradoras sin salario cargado, costeadas con
-                            el promedio genérico.
+                            Incluye horas de miembros del equipo sin salario cargado, costeadas
+                            con el promedio genérico.
                           </TooltipContent>
                         </Tooltip>
                       )}

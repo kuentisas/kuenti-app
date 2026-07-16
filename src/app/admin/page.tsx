@@ -464,7 +464,7 @@ export default async function AdminDashboardPage({
                   <TableCell colSpan={6} className="text-center text-muted-foreground">
                     No hay ajustes manuales en {mesAjustesNombre}
                     {colaboradorFiltroId
-                      ? ` para ${colaboradorasParaFiltro?.find((c) => c.id === colaboradorFiltroId)?.nombre ?? "esta colaboradora"}`
+                      ? ` para ${colaboradorasParaFiltro?.find((c) => c.id === colaboradorFiltroId)?.nombre ?? "este miembro del equipo"}`
                       : ""}
                     .
                   </TableCell>
