@@ -46,8 +46,8 @@ export function SuggestActivityDialog({
         return;
       }
       toast({
-        title: "Actividad sugerida",
-        description: "Queda pendiente de aprobación del administrador.",
+        title: "Actividad agregada",
+        description: "Ya está disponible para usar este mes.",
       });
       setOpen(false);
     });
@@ -60,14 +60,14 @@ export function SuggestActivityDialog({
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" className="gap-2">
           <Lightbulb className="h-4 w-4" />
-          Sugerir actividad eventual
+          Agregar actividad eventual
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Sugerir actividad eventual</DialogTitle>
+          <DialogTitle>Agregar actividad eventual</DialogTitle>
           <DialogDescription>
-            Queda pendiente hasta que un administrador la apruebe. Solo aplica al mes actual.
+            Queda disponible de inmediato. Solo aplica al mes actual.
           </DialogDescription>
         </DialogHeader>
         <form action={handleSubmit} className="space-y-4">
@@ -102,7 +102,7 @@ export function SuggestActivityDialog({
           <DialogFooter>
             <Button type="submit" disabled={isPending} className="gap-2">
               {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-              Enviar sugerencia
+              Agregar actividad
             </Button>
           </DialogFooter>
         </form>

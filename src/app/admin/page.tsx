@@ -16,7 +16,6 @@ import { Badge } from "@/components/ui/badge";
 import { LiveDuration } from "@/components/live-duration";
 import { RealtimeRefresher } from "@/components/realtime-refresher";
 import { formatDurationShort } from "@/lib/format";
-import { ActivityApprovalActions } from "./activity-approval-actions";
 import { CorrectionApprovalActions } from "./correction-approval-actions";
 import { AdjustmentsColaboradoraSelect } from "./adjustments-colaboradora-select";
 
@@ -28,10 +27,11 @@ interface ActiveTimerRow {
   activities: { nombre: string } | null;
 }
 
-interface PendingActivityRow {
+interface EventualActivityRow {
   id: string;
   nombre: string;
   motivo: string | null;
+  mes_aplicable: string | null;
   created_at: string;
   clients: { nombre: string } | null;
   users: { nombre: string } | null;
@@ -103,13 +103,17 @@ export default async function AdminDashboardPage({
 
   const activeTimers = (activeTimersRaw ?? []) as unknown as ActiveTimerRow[];
 
-  const { data: pendingActivitiesRaw } = await supabase
+  // Ya no requieren aprobación (quedan 'aprobada' desde que se crean) — esto
+  // es una bitácora informativa de lo que fueron agregando las
+  // colaboradoras, no una cola de trabajo pendiente.
+  const { data: addedEventualActivitiesRaw } = await supabase
     .from("activities")
-    .select("id, nombre, motivo, created_at, clients(nombre), users!sugerida_por(nombre)")
-    .eq("estado_aprobacion", "pendiente")
-    .order("created_at", { ascending: true });
+    .select("id, nombre, motivo, mes_aplicable, created_at, clients(nombre), users!sugerida_por(nombre)")
+    .not("sugerida_por", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(50);
 
-  const pendingActivities = (pendingActivitiesRaw ?? []) as unknown as PendingActivityRow[];
+  const addedEventualActivities = (addedEventualActivitiesRaw ?? []) as unknown as EventualActivityRow[];
 
   const { data: pendingCorrectionsRaw } = await supabase
     .from("activity_corrections")
@@ -168,6 +172,19 @@ export default async function AdminDashboardPage({
       month: "short",
       hour: "2-digit",
       minute: "2-digit",
+    });
+  }
+
+  // mes_aplicable es un date "YYYY-MM-DD" (una fecha calendario, no un
+  // instante) — se formatea vía UTC "neutro" a propósito, para no
+  // arrastrar ningún corrimiento de zona horaria al parsear/mostrar.
+  function formatMesAplicable(mes: string | null) {
+    if (!mes) return "—";
+    const [year, month] = mes.split("-").map(Number);
+    return new Date(Date.UTC(year, month - 1, 1)).toLocaleDateString("es-CO", {
+      timeZone: "UTC",
+      month: "long",
+      year: "numeric",
     });
   }
 
@@ -287,7 +304,7 @@ export default async function AdminDashboardPage({
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <Lightbulb className="h-4 w-4 text-accent" />
-            Actividades pendientes de aprobación
+            Actividades eventuales agregadas
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
@@ -296,33 +313,33 @@ export default async function AdminDashboardPage({
               <TableRow>
                 <TableHead>Cliente</TableHead>
                 <TableHead>Actividad</TableHead>
+                <TableHead>Mes</TableHead>
                 <TableHead>Motivo</TableHead>
-                <TableHead>Sugerida por</TableHead>
+                <TableHead>Agregada por</TableHead>
                 <TableHead>Fecha</TableHead>
-                <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {pendingActivities.length === 0 && (
+              {addedEventualActivities.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center text-muted-foreground">
-                    No hay actividades pendientes de aprobación.
+                    No se han agregado actividades eventuales todavía.
                   </TableCell>
                 </TableRow>
               )}
-              {pendingActivities.map((a) => (
+              {addedEventualActivities.map((a) => (
                 <TableRow key={a.id}>
                   <TableCell>{a.clients?.nombre ?? "—"}</TableCell>
                   <TableCell className="font-medium">{a.nombre}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {formatMesAplicable(a.mes_aplicable)}
+                  </TableCell>
                   <TableCell className="max-w-xs truncate text-muted-foreground">
                     {a.motivo ?? "—"}
                   </TableCell>
                   <TableCell>{a.users?.nombre ?? "—"}</TableCell>
                   <TableCell className="text-muted-foreground">
                     {formatDateTime(a.created_at)}
-                  </TableCell>
-                  <TableCell>
-                    <ActivityApprovalActions activityId={a.id} />
                   </TableCell>
                 </TableRow>
               ))}

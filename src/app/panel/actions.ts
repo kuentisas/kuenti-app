@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { createClient } from "@/lib/supabase/server";
-import { bogotaDatetimeLocalToISOString } from "@/lib/dates";
+import { bogotaDatetimeLocalToISOString, bogotaMonthKey } from "@/lib/dates";
 
 export async function startActivity(clientId: string, activityId: string) {
   const supabase = createClient();
@@ -45,13 +45,13 @@ export async function suggestActivity(clientId: string, nombre: string, motivo: 
     return { error: parsed.error.issues[0]?.message ?? "Datos inválidos" };
   }
 
-  const now = new Date();
-  const mesAplicable = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+  const mesAplicable = `${bogotaMonthKey()}-01`;
 
   const supabase = createClient();
   // estado_aprobacion y sugerida_por los fuerza el trigger
-  // set_activity_approval_defaults en el servidor (Fase 1) — no hace falta
-  // (ni conviene) mandarlos desde acá.
+  // set_activity_approval_defaults en el servidor — no hace falta (ni
+  // conviene) mandarlos desde acá. Desde el cambio de "sin aprobación",
+  // el trigger deja la actividad en 'aprobada' de una.
   const { error } = await supabase.from("activities").insert({
     client_id: parsed.data.clientId,
     nombre: parsed.data.nombre,
