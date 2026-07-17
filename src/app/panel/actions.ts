@@ -96,6 +96,16 @@ export async function requestCorrection(
   return { error: null };
 }
 
+export async function markCorrectionsSeen() {
+  const supabase = createClient();
+  const { error } = await supabase.rpc("mark_corrections_seen");
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/panel");
+  return { error: null };
+}
+
 const resolveStaleTimerSchema = z.object({
   choice: z.enum(["seguido", "ajustado"]),
   actualEndTime: z.string().optional(),

@@ -4,6 +4,10 @@ import { createClient } from "@/lib/supabase/server";
 import { bogotaMonthKey, startOfBogotaDay } from "@/lib/dates";
 import { RealtimeRefresher } from "@/components/realtime-refresher";
 import { TimerPanel, type AssignedClient, type TodayEntry } from "./timer-panel";
+import {
+  ResolvedCorrectionsBanner,
+  type ResolvedCorrection,
+} from "./resolved-corrections-banner";
 
 interface AssignmentRow {
   clients: {
@@ -38,6 +42,18 @@ interface TodayEntryRow {
   duration_seconds: number | null;
   clients: { nombre: string } | null;
   activities: { nombre: string } | null;
+}
+
+interface ResolvedCorrectionRow {
+  id: string;
+  estado: "aprobada" | "rechazada";
+  nota_revision: string | null;
+  nueva_hora_fin_sugerida: string;
+  fecha_revision: string;
+  time_entries: {
+    clients: { nombre: string } | null;
+    activities: { nombre: string } | null;
+  } | null;
 }
 
 export default async function PanelPage() {
@@ -118,6 +134,28 @@ export default async function PanelPage() {
   // navegador.
   const isStale = !!activeEntry && Date.now() - new Date(activeEntry.start_time).getTime() > 5 * 60 * 1000;
 
+  const { data: resolvedCorrectionsRaw } = await supabase
+    .from("activity_corrections")
+    .select(
+      "id, estado, nota_revision, nueva_hora_fin_sugerida, fecha_revision, time_entries(clients(nombre), activities(nombre))"
+    )
+    .eq("user_id", user.id)
+    .neq("estado", "pendiente")
+    .eq("visto_por_solicitante", false)
+    .order("fecha_revision", { ascending: false });
+
+  const resolvedCorrections: ResolvedCorrection[] = (
+    (resolvedCorrectionsRaw ?? []) as unknown as ResolvedCorrectionRow[]
+  ).map((c) => ({
+    id: c.id,
+    estado: c.estado,
+    nota_revision: c.nota_revision,
+    nueva_hora_fin_sugerida: c.nueva_hora_fin_sugerida,
+    fecha_revision: c.fecha_revision,
+    clientNombre: c.time_entries?.clients?.nombre ?? "—",
+    activityNombre: c.time_entries?.activities?.nombre ?? "—",
+  }));
+
   return (
     <>
       {/* Sin esto, una actividad recién aprobada (o agregada/desactivada
@@ -125,6 +163,15 @@ export default async function PanelPage() {
           página por su cuenta — y no tenía forma de saber que debía
           hacerlo. Mismo patrón que el dashboard admin. */}
       <RealtimeRefresher table="activities" />
+      {/* Para que el badge de correcciones resueltas aparezca sin recargar
+          si el admin decide mientras la colaboradora tiene el panel
+          abierto. */}
+      <RealtimeRefresher table="activity_corrections" />
+      {resolvedCorrections.length > 0 && (
+        <div className="mb-4">
+          <ResolvedCorrectionsBanner corrections={resolvedCorrections} />
+        </div>
+      )}
       <TimerPanel
         clients={clients}
         activeEntry={

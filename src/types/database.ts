@@ -264,6 +264,8 @@ export interface Database {
           revisado_por: string | null;
           nota_revision: string | null;
           fecha_revision: string | null;
+          hora_fin_original: string | null;
+          visto_por_solicitante: boolean;
           created_at: string;
         };
         Insert: {
@@ -332,6 +334,10 @@ export interface Database {
       reject_correction: {
         Args: { p_correction_id: string; p_reason?: string | null };
         Returns: Database["public"]["Tables"]["activity_corrections"]["Row"];
+      };
+      mark_corrections_seen: {
+        Args: Record<string, never>;
+        Returns: number;
       };
     };
     Enums: Record<string, never>;
