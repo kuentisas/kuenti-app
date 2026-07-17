@@ -69,7 +69,7 @@ export function StaleTimerModal({
                 hour: "2-digit",
                 minute: "2-digit",
               })}
-              , lleva {formatHMS(elapsedSeconds)} activo. Antes de seguir, contanos qué pasó.
+              , lleva {formatHMS(elapsedSeconds)} activo. Antes de seguir, cuéntanos qué pasó.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
