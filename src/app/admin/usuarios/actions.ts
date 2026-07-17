@@ -145,8 +145,18 @@ export async function deactivateUser(userId: string) {
     return { error: "No puedes desactivar tu propia cuenta." };
   }
 
-  const { error } = await supabase.from("users").update({ activo: false }).eq("id", userId);
+  // .select().maybeSingle() en vez de solo chequear error: un UPDATE que
+  // RLS bloquea (o un userId que ya no existe) devuelve 0 filas sin
+  // lanzar error — sin esto, la action reportaría éxito sin haber
+  // cambiado nada (hallazgo de auditoría).
+  const { data, error } = await supabase
+    .from("users")
+    .update({ activo: false })
+    .eq("id", userId)
+    .select()
+    .maybeSingle();
   if (error) return { error: error.message };
+  if (!data) return { error: "No se pudo desactivar (sin permiso, o el usuario ya no existe)." };
 
   try {
     const adminClient = createAdminClient();
@@ -164,12 +174,15 @@ export async function reactivateUser(userId: string) {
   if ("error" in guard) return guard;
 
   const supabase = createClient();
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("users")
     .update({ activo: true, deleted_at: null })
-    .eq("id", userId);
+    .eq("id", userId)
+    .select()
+    .maybeSingle();
 
   if (error) return { error: error.message };
+  if (!data) return { error: "No se pudo reactivar (sin permiso, o el usuario ya no existe)." };
 
   try {
     const adminClient = createAdminClient();
@@ -293,13 +306,18 @@ export async function updateUserSalary(userId: string, salario: number) {
   const supabase = createClient();
   // RLS: user_salaries es admin-only sin excepciones (Fase 1), así que este
   // update ya está protegido a nivel de motor, no solo por estar en una
-  // página de /admin.
-  const { error } = await supabase
+  // página de /admin. .select().maybeSingle() además de chequear error:
+  // un UPDATE bloqueado por RLS devuelve 0 filas sin error — sin esto se
+  // reportaría "guardado" aunque el salario no haya cambiado.
+  const { data, error } = await supabase
     .from("user_salaries")
     .update({ salario_mensual: parsed.data.salario })
-    .eq("user_id", parsed.data.userId);
+    .eq("user_id", parsed.data.userId)
+    .select()
+    .maybeSingle();
 
   if (error) return { error: error.message };
+  if (!data) return { error: "No se pudo actualizar el salario (sin permiso, o el usuario ya no existe)." };
 
   revalidatePath("/admin/usuarios");
   revalidatePath("/admin/rentabilidad");

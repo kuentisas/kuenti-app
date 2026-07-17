@@ -23,6 +23,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { formatDurationShort } from "@/lib/format";
+import { BOGOTA_TZ } from "@/lib/dates";
 import { RequestCorrectionDialog } from "../request-correction-dialog";
 
 export interface SessionEntry {
@@ -35,11 +36,11 @@ export interface SessionEntry {
 }
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("es-CO", { day: "numeric", month: "short" });
+  return new Date(iso).toLocaleDateString("es-CO", { timeZone: BOGOTA_TZ, day: "numeric", month: "short" });
 }
 
 function formatClock(iso: string) {
-  return new Date(iso).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
+  return new Date(iso).toLocaleTimeString("es-CO", { timeZone: BOGOTA_TZ, hour: "2-digit", minute: "2-digit" });
 }
 
 export function ActivityDetailDialog({

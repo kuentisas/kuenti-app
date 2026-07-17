@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc --noEmit)",
+      "Bash(npm run build)",
+      "Bash(node check_fix.mjs)",
+      "Bash(node check_fix.mjs *)",
+      "Bash(rm check_fix.mjs)",
+      "Bash(rm -f check_fix.mjs)"
+    ]
+  }
+}

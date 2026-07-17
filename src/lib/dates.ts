@@ -49,6 +49,29 @@ export function endOfBogotaMonth(monthKey?: string): Date {
   return new Date(nextMonthStart.getTime() - 1);
 }
 
+// "YYYY-MM-DDTHH:MM:SS" en hora de Bogotá — para precargar un
+// <input type="datetime-local"> cuyo valor luego se interpreta como hora
+// Bogotá vía bogotaDatetimeLocalToISOString. Sin argumento, usa el
+// instante actual; también sirve para convertir un timestamp existente
+// (ej. el end_time actual de un registro, al precargar una corrección).
+// Usar getters locales del navegador (getHours(), etc.) en vez de esto
+// desalinea el valor si el dispositivo no está en hora Bogotá.
+export function bogotaDatetimeLocal(input: Date | string = new Date()): string {
+  const date = typeof input === "string" ? new Date(input) : input;
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: BOGOTA_TZ,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).formatToParts(date);
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "00";
+  return `${get("year")}-${get("month")}-${get("day")}T${get("hour")}:${get("minute")}:${get("second")}`;
+}
+
 // Convierte el valor crudo de un <input type="datetime-local"> (sin
 // offset, "YYYY-MM-DDTHH:MM:SS") al instante UTC correcto asumiendo que
 // la hora escrita es hora de Bogotá. Sin esto, un Server Action que hace

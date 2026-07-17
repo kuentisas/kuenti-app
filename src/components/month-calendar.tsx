@@ -6,6 +6,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { formatDurationShort } from "@/lib/format";
+import { BOGOTA_TZ } from "@/lib/dates";
 
 export interface CalendarSession {
   id: string;
@@ -19,7 +20,7 @@ export interface CalendarSession {
 }
 
 function formatClock(iso: string) {
-  return new Date(iso).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
+  return new Date(iso).toLocaleTimeString("es-CO", { timeZone: BOGOTA_TZ, hour: "2-digit", minute: "2-digit" });
 }
 
 // Grilla mensual simple: 7 columnas (lunes a domingo), sin librería de

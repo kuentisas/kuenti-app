@@ -120,7 +120,7 @@ export function CorrectionsHistoryTable({
                         {formatHora(c.nueva_hora_fin_sugerida)}
                       </div>
                       <div className="sm:col-span-2">
-                        <span className="text-muted-foreground">Motivo de la colaboradora: </span>
+                        <span className="text-muted-foreground">Motivo: </span>
                         {c.motivo}
                       </div>
                       {c.estado === "rechazada" && (

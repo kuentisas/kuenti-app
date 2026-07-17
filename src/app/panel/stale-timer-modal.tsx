@@ -6,6 +6,7 @@ import { Clock3, Loader2, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/use-toast";
+import { BOGOTA_TZ } from "@/lib/dates";
 import { resolveStaleTimer } from "./actions";
 import { AdjustTimeDialog } from "./adjust-time-dialog";
 import type { ActiveEntry } from "./timer-panel";
@@ -64,6 +65,7 @@ export function StaleTimerModal({
             <DialogDescription>
               {entry.clientNombre} · {entry.activityNombre} — iniciado a las{" "}
               {new Date(entry.startTime).toLocaleTimeString("es-CO", {
+                timeZone: BOGOTA_TZ,
                 hour: "2-digit",
                 minute: "2-digit",
               })}

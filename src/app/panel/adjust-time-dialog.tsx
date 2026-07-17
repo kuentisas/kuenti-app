@@ -16,18 +16,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/use-toast";
+import { bogotaDatetimeLocal } from "@/lib/dates";
 import { resolveStaleTimer } from "./actions";
-
-// Segundos incluidos a propósito: sin ellos, una actividad de menos de un
-// minuto puede quedar con la hora "corregida" antes del start_time real y
-// violar la policy de RLS (bug real que ya pasó en la Fase 2).
-function nowAsDatetimeLocal() {
-  const d = new Date();
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
-    d.getHours()
-  )}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-}
 
 export function AdjustTimeDialog({
   open,
@@ -73,7 +63,7 @@ export function AdjustTimeDialog({
               type="datetime-local"
               step="1"
               required
-              defaultValue={nowAsDatetimeLocal()}
+              defaultValue={bogotaDatetimeLocal()}
             />
           </div>
           <div className="space-y-1.5">

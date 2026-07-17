@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/table";
 import { useToast } from "@/components/ui/use-toast";
 import { formatDurationShort } from "@/lib/format";
+import { BOGOTA_TZ } from "@/lib/dates";
 import { startActivity, stopActivity } from "./actions";
 import { SuggestActivityDialog } from "./suggest-activity-dialog";
 import { RequestCorrectionDialog } from "./request-correction-dialog";
@@ -68,6 +69,7 @@ function formatHMS(totalSeconds: number) {
 
 function formatClock(iso: string) {
   return new Date(iso).toLocaleTimeString("es-CO", {
+    timeZone: BOGOTA_TZ,
     hour: "2-digit",
     minute: "2-digit",
   });
