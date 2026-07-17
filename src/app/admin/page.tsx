@@ -495,64 +495,71 @@ export default async function AdminDashboardPage({
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Miembro</TableHead>
-                <TableHead>Cliente</TableHead>
-                <TableHead>Actividad</TableHead>
-                <TableHead>Inicio</TableHead>
-                <TableHead>Fin (ajustado)</TableHead>
-                <TableHead>Origen</TableHead>
-                <TableHead>Motivo</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {manualAdjustments.length === 0 && (
+          {/* Altura fija + scroll interno: esta tarjeta tiene el límite más
+              alto del dashboard (limit(200) más abajo) y sin esto un mes con
+              mucho ajuste manual estira toda la página del dashboard sin
+              control. El header queda pegado (sticky) para no perder de
+              vista las columnas al bajar. */}
+          <div className="max-h-96 overflow-y-auto">
+            <Table>
+              <TableHeader className="sticky top-0 z-10 bg-card">
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground">
-                    No hay ajustes manuales en {mesAjustesNombre}
-                    {colaboradorFiltroId
-                      ? ` para ${colaboradorasParaFiltro?.find((c) => c.id === colaboradorFiltroId)?.nombre ?? "este miembro del equipo"}`
-                      : ""}
-                    .
-                  </TableCell>
+                  <TableHead>Miembro</TableHead>
+                  <TableHead>Cliente</TableHead>
+                  <TableHead>Actividad</TableHead>
+                  <TableHead>Inicio</TableHead>
+                  <TableHead>Fin (ajustado)</TableHead>
+                  <TableHead>Origen</TableHead>
+                  <TableHead>Motivo</TableHead>
                 </TableRow>
-              )}
-              {manualAdjustments.map((m) => (
-                <TableRow key={m.id}>
-                  <TableCell className="font-medium">{m.users?.nombre ?? "—"}</TableCell>
-                  <TableCell>{m.clients?.nombre ?? "—"}</TableCell>
-                  <TableCell>
-                    <Badge variant="secondary">{m.activities?.nombre ?? "—"}</Badge>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {formatDateTime(m.start_time)}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {m.end_time ? formatDateTime(m.end_time) : "—"}
-                  </TableCell>
-                  <TableCell>
-                    {approvedOriginByEntryId.has(m.id) ? (
-                      <div className="space-y-0.5">
-                        <Badge variant="success">Aprobado</Badge>
-                        {approvedOriginByEntryId.get(m.id) && (
-                          <p className="text-xs text-muted-foreground">
-                            por {approvedOriginByEntryId.get(m.id)}
-                          </p>
-                        )}
-                      </div>
-                    ) : (
-                      <Badge variant="warning">Autoajustado</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="max-w-xs truncate text-muted-foreground">
-                    {m.nota_ajuste ?? "—"}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {manualAdjustments.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center text-muted-foreground">
+                      No hay ajustes manuales en {mesAjustesNombre}
+                      {colaboradorFiltroId
+                        ? ` para ${colaboradorasParaFiltro?.find((c) => c.id === colaboradorFiltroId)?.nombre ?? "este miembro del equipo"}`
+                        : ""}
+                      .
+                    </TableCell>
+                  </TableRow>
+                )}
+                {manualAdjustments.map((m) => (
+                  <TableRow key={m.id}>
+                    <TableCell className="font-medium">{m.users?.nombre ?? "—"}</TableCell>
+                    <TableCell>{m.clients?.nombre ?? "—"}</TableCell>
+                    <TableCell>
+                      <Badge variant="secondary">{m.activities?.nombre ?? "—"}</Badge>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {formatDateTime(m.start_time)}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {m.end_time ? formatDateTime(m.end_time) : "—"}
+                    </TableCell>
+                    <TableCell>
+                      {approvedOriginByEntryId.has(m.id) ? (
+                        <div className="space-y-0.5">
+                          <Badge variant="success">Aprobado</Badge>
+                          {approvedOriginByEntryId.get(m.id) && (
+                            <p className="text-xs text-muted-foreground">
+                              por {approvedOriginByEntryId.get(m.id)}
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <Badge variant="warning">Autoajustado</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="max-w-xs truncate text-muted-foreground">
+                      {m.nota_ajuste ?? "—"}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </div>
