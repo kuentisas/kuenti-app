@@ -70,6 +70,11 @@ interface ManualAdjustmentRow {
   activities: { nombre: string } | null;
 }
 
+interface ApprovedCorrectionOriginRow {
+  time_entry_id: string;
+  revisor: { nombre: string } | null;
+}
+
 export default async function AdminDashboardPage({
   searchParams,
 }: {
@@ -158,6 +163,32 @@ export default async function AdminDashboardPage({
   const { data: manualAdjustmentsRaw } = await manualAdjustmentsQuery;
 
   const manualAdjustments = (manualAdjustmentsRaw ?? []) as unknown as ManualAdjustmentRow[];
+
+  // "Ajustes manuales" mezcla dos orígenes con el mismo estado en
+  // time_entries ('ajustado_manualmente'): la colaboradora autoajustando su
+  // propio timer huérfano/2h (resolve_stale_timer, sin supervisión) y una
+  // corrección que un admin/supervisor aprobó explícitamente
+  // (approve_correction, ver 0021). Se cruza acá con activity_corrections
+  // para poder distinguirlas en la tabla — si un time_entry_id aparece con
+  // una corrección 'aprobada', es Tipo 2, no autoajuste.
+  const { data: approvedOriginsRaw } =
+    manualAdjustments.length > 0
+      ? await supabase
+          .from("activity_corrections")
+          .select("time_entry_id, revisor:users!revisado_por(nombre)")
+          .eq("estado", "aprobada")
+          .in(
+            "time_entry_id",
+            manualAdjustments.map((m) => m.id)
+          )
+      : { data: [] };
+
+  const approvedOriginByEntryId = new Map(
+    ((approvedOriginsRaw ?? []) as unknown as ApprovedCorrectionOriginRow[]).map((c) => [
+      c.time_entry_id,
+      c.revisor?.nombre ?? null,
+    ])
+  );
 
   const mesAjustesNombre = ajustesMonthStart.toLocaleDateString("es-CO", {
     timeZone: BOGOTA_TZ,
@@ -472,13 +503,14 @@ export default async function AdminDashboardPage({
                 <TableHead>Actividad</TableHead>
                 <TableHead>Inicio</TableHead>
                 <TableHead>Fin (ajustado)</TableHead>
+                <TableHead>Origen</TableHead>
                 <TableHead>Motivo</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {manualAdjustments.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center text-muted-foreground">
                     No hay ajustes manuales en {mesAjustesNombre}
                     {colaboradorFiltroId
                       ? ` para ${colaboradorasParaFiltro?.find((c) => c.id === colaboradorFiltroId)?.nombre ?? "este miembro del equipo"}`
@@ -499,6 +531,20 @@ export default async function AdminDashboardPage({
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {m.end_time ? formatDateTime(m.end_time) : "—"}
+                  </TableCell>
+                  <TableCell>
+                    {approvedOriginByEntryId.has(m.id) ? (
+                      <div className="space-y-0.5">
+                        <Badge variant="success">Aprobado</Badge>
+                        {approvedOriginByEntryId.get(m.id) && (
+                          <p className="text-xs text-muted-foreground">
+                            por {approvedOriginByEntryId.get(m.id)}
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <Badge variant="warning">Autoajustado</Badge>
+                    )}
                   </TableCell>
                   <TableCell className="max-w-xs truncate text-muted-foreground">
                     {m.nota_ajuste ?? "—"}
