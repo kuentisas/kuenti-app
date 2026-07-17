@@ -31,7 +31,10 @@ interface ClientRow {
   tarifa_mensual: number;
 }
 
-function statusFor(costo: number, tarifa: number) {
+function statusFor(seconds: number, costo: number, tarifa: number) {
+  if (seconds === 0) {
+    return { label: "Sin actividad este mes", variant: "secondary" as const };
+  }
   if (tarifa <= 0) {
     return { label: "Sin tarifa configurada", variant: "secondary" as const };
   }
@@ -119,7 +122,7 @@ export default async function RentabilidadPage({
     const seconds = secondsByClient.get(client.id) ?? 0;
     const horas = secondsToHours(seconds);
     const costo = costoByClient.get(client.id) ?? 0;
-    const status = statusFor(costo, client.tarifa_mensual);
+    const status = statusFor(seconds, costo, client.tarifa_mensual);
     const hasReal = hasRealByClient.get(client.id) ?? false;
     const hasEstimated = hasEstimatedByClient.get(client.id) ?? false;
     const costoTipo: "real" | "estimado" | "mixto" | null = hasEstimated
