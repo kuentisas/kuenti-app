@@ -40,7 +40,7 @@ export function SettingsForm({ initialValue }: { initialValue: number }) {
             id="costo_hora"
             type="number"
             min="0"
-            step="1000"
+            step="1"
             value={value}
             onChange={(e) => setValue(e.target.value)}
             className="w-40"

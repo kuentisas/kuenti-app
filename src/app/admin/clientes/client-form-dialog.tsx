@@ -91,7 +91,7 @@ export function ClientFormDialog({ mode, client, canEditTarifa = true }: ClientF
                 name="tarifa_mensual"
                 type="number"
                 min="0"
-                step="1000"
+                step="1"
                 placeholder="Sin definir"
                 defaultValue={client?.tarifa_mensual || undefined}
               />

@@ -97,7 +97,7 @@ export function SalaryHistoryDialog({
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="salario">Salario correcto (COP)</Label>
-                    <Input id="salario" name="salario" type="number" min="0" step="1000" required />
+                    <Input id="salario" name="salario" type="number" min="0" step="1" required />
                   </div>
                 </div>
                 <DialogFooter className="gap-2 sm:justify-start">

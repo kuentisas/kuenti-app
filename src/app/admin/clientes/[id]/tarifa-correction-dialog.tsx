@@ -68,7 +68,7 @@ export function TarifaCorrectionDialog({ clientId }: { clientId: string }) {
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="tarifa">Tarifa correcta (COP)</Label>
-            <Input id="tarifa" name="tarifa" type="number" min="0" step="1000" required />
+            <Input id="tarifa" name="tarifa" type="number" min="0" step="1" required />
           </div>
           <DialogFooter>
             <Button type="submit" disabled={isPending} className="gap-2">

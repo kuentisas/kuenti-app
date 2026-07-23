@@ -67,7 +67,7 @@ export function SalaryDialog({
               name="salario"
               type="number"
               min="0"
-              step="1000"
+              step="1"
               required
               defaultValue={currentSalary ?? undefined}
             />
