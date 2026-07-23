@@ -23,15 +23,20 @@ import { signOut } from "@/app/actions/auth";
 interface NavItem {
   href: string;
   label: string;
+  // Solo para la barra inferior móvil: con hasta 8 ítems en 375px, la
+  // etiqueta completa no entra sin superponerse a la del vecino (una sola
+  // palabra larga no hace wrap dentro de una columna tan angosta). El
+  // sidebar de escritorio siempre usa `label` completo.
+  mobileLabel?: string;
   icon: React.ComponentType<{ className?: string }>;
 }
 
 const ADMIN_NAV: NavItem[] = [
-  { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/admin", label: "Dashboard", mobileLabel: "Inicio", icon: LayoutDashboard },
   { href: "/admin/reportes", label: "Reportes", icon: BarChart3 },
-  { href: "/admin/rentabilidad", label: "Rentabilidad", icon: TrendingUp },
-  { href: "/admin/calendario", label: "Calendario", icon: CalendarDays },
-  { href: "/admin/aprobaciones", label: "Aprobaciones", icon: History },
+  { href: "/admin/rentabilidad", label: "Rentabilidad", mobileLabel: "Rentab.", icon: TrendingUp },
+  { href: "/admin/calendario", label: "Calendario", mobileLabel: "Calend.", icon: CalendarDays },
+  { href: "/admin/aprobaciones", label: "Aprobaciones", mobileLabel: "Aprob.", icon: History },
   { href: "/admin/clientes", label: "Clientes", icon: Building2 },
   { href: "/admin/usuarios", label: "Equipo", icon: Users },
 ];
@@ -44,8 +49,8 @@ const SUPERVISOR_NAV: NavItem[] = ADMIN_NAV.filter(
 
 const COLABORADORA_NAV: NavItem[] = [
   { href: "/panel", label: "Mis clientes", icon: Clock },
-  { href: "/panel/resumen", label: "Resumen del mes", icon: CalendarRange },
-  { href: "/panel/calendario", label: "Calendario", icon: CalendarDays },
+  { href: "/panel/resumen", label: "Resumen del mes", mobileLabel: "Resumen", icon: CalendarRange },
+  { href: "/panel/calendario", label: "Calendario", mobileLabel: "Calend.", icon: CalendarDays },
 ];
 
 export function AppShell({
@@ -111,7 +116,7 @@ export function AppShell({
         </div>
       </aside>
 
-      <div className="flex flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-16 items-center justify-between border-b bg-white px-4 md:px-8">
           <div className="flex items-center md:hidden">
             <Image
@@ -129,23 +134,35 @@ export function AppShell({
             </div>
           </div>
         </header>
-        <main className="flex-1 overflow-y-auto p-4 md:p-8">{children}</main>
-        <nav className="flex items-center justify-around border-t bg-white p-2 md:hidden">
+        <main className="min-w-0 flex-1 overflow-y-auto p-4 md:p-8">{children}</main>
+        <nav className="flex items-center gap-0.5 border-t bg-white p-2 md:hidden">
           {nav.map((item) => (
             <Link
               key={item.href}
               href={item.href}
               className={cn(
-                "flex flex-col items-center gap-1 rounded-md px-3 py-1.5 text-xs",
+                "flex min-w-0 flex-1 flex-col items-center gap-1 rounded-md px-1 py-1.5 text-center text-[10px] leading-tight break-words",
                 pathname === item.href
                   ? "text-kuenti-slate"
                   : "text-muted-foreground"
               )}
             >
-              <item.icon className="h-5 w-5" />
-              {item.label}
+              <item.icon className="h-5 w-5 shrink-0" />
+              {item.mobileLabel ?? item.label}
             </Link>
           ))}
+          {/* El botón de cerrar sesión del sidebar vive en <aside>, oculto en
+              móvil — sin esto no había NINGUNA forma de cerrar sesión desde
+              el celular (hallazgo de la auditoría responsive). */}
+          <form action={signOut} className="contents">
+            <button
+              type="submit"
+              className="flex min-w-0 flex-1 flex-col items-center gap-1 rounded-md px-1 py-1.5 text-center text-[10px] leading-tight break-words text-muted-foreground"
+            >
+              <LogOut className="h-5 w-5 shrink-0" />
+              Salir
+            </button>
+          </form>
         </nav>
       </div>
     </div>

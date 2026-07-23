@@ -348,7 +348,7 @@ export function TimerPanel({
                             variant="destructive"
                             onClick={handleStop}
                             disabled={isPending || !isOnline || staleUnresolved}
-                            className="gap-1.5"
+                            className="h-11 gap-1.5"
                           >
                             {isLoadingThis ? (
                               <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -365,7 +365,7 @@ export function TimerPanel({
                               handleStart(client.id, client.nombre, activity.id, activity.nombre)
                             }
                             disabled={isPending || !isOnline || staleUnresolved}
-                            className="gap-1.5"
+                            className="h-11 gap-1.5"
                           >
                             {isLoadingThis ? (
                               <Loader2 className="h-3.5 w-3.5 animate-spin" />

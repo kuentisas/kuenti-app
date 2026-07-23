@@ -49,4 +49,14 @@
   body {
     @apply bg-background text-foreground;
   }
+  /* Red de seguridad: por default, un item flex/grid no se encoge por
+     debajo del ancho intrínseco de su contenido (min-width: auto). Sin
+     esto, cualquier hijo ancho (una tabla, una grilla de tarjetas) puede
+     estirar toda la cadena de contenedores en vez de activar su propio
+     scroll interno — el bug real que causaba desborde horizontal en casi
+     toda la app en móvil (auditoría responsive). */
+  .flex,
+  .grid {
+    min-width: 0;
+  }
 }
