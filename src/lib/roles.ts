@@ -16,7 +16,8 @@ export function canManageOperations(role: Role): boolean {
 }
 
 // Tarifas, salarios, rentabilidad, costo y eficiencia — exclusivo admin.
-// Coincide 1:1 con lo que ya protege la RLS de client_rates/user_salaries.
+// Coincide 1:1 con lo que ya protege is_admin() en client_rate_history/
+// user_salary_history y en set_/correct_*_tarifa/salario.
 export function canViewFinance(role: Role): boolean {
   return role === "admin";
 }

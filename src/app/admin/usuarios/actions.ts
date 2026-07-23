@@ -297,6 +297,10 @@ const salarySchema = z.object({
   salario: z.coerce.number().min(0, "El salario debe ser positivo"),
 });
 
+// set_user_salario decide la vigencia (mes actual si es el primer
+// salario cargado, mes siguiente si ya había uno) y valida is_admin()
+// internamente — mismo nivel de protección que el update directo de
+// antes, ahora con historial de vigencia detrás.
 export async function updateUserSalary(userId: string, salario: number) {
   const parsed = salarySchema.safeParse({ userId, salario });
   if (!parsed.success) {
@@ -304,20 +308,48 @@ export async function updateUserSalary(userId: string, salario: number) {
   }
 
   const supabase = createClient();
-  // RLS: user_salaries es admin-only sin excepciones (Fase 1), así que este
-  // update ya está protegido a nivel de motor, no solo por estar en una
-  // página de /admin. .select().maybeSingle() además de chequear error:
-  // un UPDATE bloqueado por RLS devuelve 0 filas sin error — sin esto se
-  // reportaría "guardado" aunque el salario no haya cambiado.
-  const { data, error } = await supabase
-    .from("user_salaries")
-    .update({ salario_mensual: parsed.data.salario })
-    .eq("user_id", parsed.data.userId)
-    .select()
-    .maybeSingle();
+  const { error } = await supabase.rpc("set_user_salario", {
+    p_user_id: parsed.data.userId,
+    p_salario_mensual: parsed.data.salario,
+  });
 
   if (error) return { error: error.message };
-  if (!data) return { error: "No se pudo actualizar el salario (sin permiso, o el usuario ya no existe)." };
+
+  revalidatePath("/admin/usuarios");
+  revalidatePath("/admin/rentabilidad");
+  return { error: null };
+}
+
+const salaryCorrectionSchema = z.object({
+  userId: z.string().uuid(),
+  salario: z.coerce.number().min(0, "El salario debe ser positivo"),
+  mesKey: z.string().regex(/^\d{4}-\d{2}$/, "Mes inválido"),
+});
+
+// Corrección retroactiva — solo admin. Acción separada y explícita a
+// propósito: nunca es el comportamiento por defecto de updateUserSalary,
+// para no reescribir historial de salarios sin querer.
+export async function correctUserSalarioHistorico(
+  userId: string,
+  salario: number,
+  mesKey: string
+) {
+  const guard = await requireRole(["admin"]);
+  if ("error" in guard) return guard;
+
+  const parsed = salaryCorrectionSchema.safeParse({ userId, salario, mesKey });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Datos inválidos" };
+  }
+
+  const supabase = createClient();
+  const { error } = await supabase.rpc("correct_user_salario_historico", {
+    p_user_id: parsed.data.userId,
+    p_salario_mensual: parsed.data.salario,
+    p_vigente_desde: `${parsed.data.mesKey}-01`,
+  });
+
+  if (error) return { error: error.message };
 
   revalidatePath("/admin/usuarios");
   revalidatePath("/admin/rentabilidad");

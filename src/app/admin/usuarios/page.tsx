@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserProfile } from "@/lib/current-user";
 import { canViewFinance, isAdmin } from "@/lib/roles";
+import { bogotaMonthKey } from "@/lib/dates";
+import { masReciente, estaVigente, formatMesVigencia } from "@/lib/vigencia";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
@@ -16,30 +18,52 @@ import { InviteDialog } from "./invite-dialog";
 import { ReassignDialog } from "./reassign-dialog";
 import { UserStatusActions } from "./user-status-actions";
 import { SalaryDialog } from "./salary-dialog";
+import { SalaryHistoryDialog } from "./salary-history-dialog";
 import { ResetPasswordDialog } from "./reset-password-dialog";
 
 export default async function UsuariosPage() {
   const profile = await getCurrentUserProfile();
   const canSeeSalario = canViewFinance(profile?.role ?? "colaboradora");
+  const isAdminReal = profile?.role === "admin";
   const canDelete = isAdmin(profile?.role ?? "colaboradora");
   const callerRole = profile?.role ?? "colaboradora";
 
   const supabase = createClient();
 
-  const [{ data: usersRaw }, { data: assignments }] = await Promise.all([
-    supabase
-      .from("users")
-      .select("id, nombre, email, role, activo, deleted_at, user_salaries(salario_mensual)")
-      .order("nombre"),
-    supabase.from("client_assignments").select("user_id, client_id, clients(nombre)"),
-  ]);
+  const [{ data: usersRaw }, { data: assignments }, { data: salaryHistoryRaw }] =
+    await Promise.all([
+      supabase
+        .from("users")
+        .select("id, nombre, email, role, activo, deleted_at")
+        .order("nombre"),
+      supabase.from("client_assignments").select("user_id, client_id, clients(nombre)"),
+      canSeeSalario
+        ? supabase
+            .from("user_salary_history")
+            .select("id, user_id, salario_mensual, vigente_desde, es_correccion")
+            .order("vigente_desde", { ascending: false })
+        : Promise.resolve({ data: [] }),
+    ]);
 
-  const users = (usersRaw ?? []).map((u) => ({
-    ...u,
-    salario_mensual:
-      (u.user_salaries as unknown as { salario_mensual: number | null } | null)
-        ?.salario_mensual ?? null,
-  }));
+  const mesActualKey = bogotaMonthKey();
+  const salarioMasRecientePorUsuario = masReciente(salaryHistoryRaw ?? [], (r) => r.user_id);
+  const historialPorUsuario = new Map<string, typeof salaryHistoryRaw>();
+  for (const row of salaryHistoryRaw ?? []) {
+    const list = historialPorUsuario.get(row.user_id) ?? [];
+    list.push(row);
+    historialPorUsuario.set(row.user_id, list);
+  }
+
+  const users = (usersRaw ?? []).map((u) => {
+    const masRecienteFila = salarioMasRecientePorUsuario.get(u.id);
+    return {
+      ...u,
+      salario_mensual: masRecienteFila?.salario_mensual ?? null,
+      salarioVigente: masRecienteFila ? estaVigente(masRecienteFila.vigente_desde, mesActualKey) : true,
+      salarioVigenteDesde: masRecienteFila?.vigente_desde ?? null,
+      salarioHistorial: historialPorUsuario.get(u.id) ?? [],
+    };
+  });
 
   const clientsByUser = new Map<string, { id: string; nombre: string }[]>();
   for (const a of assignments ?? []) {
@@ -122,16 +146,34 @@ export default async function UsuariosPage() {
                     {canSeeSalario && (
                       <TableCell className="text-right">
                         {u.role === "colaboradora" ? (
-                          <div className="flex items-center justify-end gap-1">
-                            <span className="font-mono text-sm">
-                              {u.salario_mensual != null ? formatCOP(u.salario_mensual) : "—"}
-                            </span>
-                            {!u.deleted_at && (
-                              <SalaryDialog
+                          <div className="flex flex-col items-end gap-0.5">
+                            <div className="flex items-center justify-end gap-1">
+                              <span className="font-mono text-sm">
+                                {u.salario_mensual != null ? formatCOP(u.salario_mensual) : "—"}
+                              </span>
+                              {!u.deleted_at && (
+                                <SalaryDialog
+                                  userId={u.id}
+                                  nombre={u.nombre}
+                                  currentSalary={u.salario_mensual}
+                                />
+                              )}
+                              <SalaryHistoryDialog
                                 userId={u.id}
                                 nombre={u.nombre}
-                                currentSalary={u.salario_mensual}
+                                historial={(u.salarioHistorial ?? []).map((h) => ({
+                                  id: h.id,
+                                  valor: h.salario_mensual,
+                                  vigente_desde: h.vigente_desde,
+                                  es_correccion: h.es_correccion,
+                                }))}
+                                isAdmin={isAdminReal}
                               />
+                            </div>
+                            {u.salario_mensual != null && !u.salarioVigente && u.salarioVigenteDesde && (
+                              <span className="text-xs text-muted-foreground">
+                                vigente desde {formatMesVigencia(u.salarioVigenteDesde)}
+                              </span>
                             )}
                           </div>
                         ) : (

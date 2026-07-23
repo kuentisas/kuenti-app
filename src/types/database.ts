@@ -64,47 +64,45 @@ export interface Database {
         };
         Relationships: [];
       };
-      client_rates: {
+      client_rate_history: {
         Row: {
+          id: string;
           client_id: string;
-          tarifa_mensual: number | null;
-          updated_at: string;
+          tarifa_mensual: number;
+          vigente_desde: string;
+          es_correccion: boolean;
+          created_by: string | null;
+          created_at: string;
         };
-        Insert: {
-          client_id: string;
-          tarifa_mensual?: number | null;
-        };
-        Update: {
-          tarifa_mensual?: number | null;
-        };
+        Insert: never;
+        Update: never;
         Relationships: [
           {
-            foreignKeyName: "client_rates_client_id_fkey";
+            foreignKeyName: "client_rate_history_client_id_fkey";
             columns: ["client_id"];
-            isOneToOne: true;
+            isOneToOne: false;
             referencedRelation: "clients";
             referencedColumns: ["id"];
           }
         ];
       };
-      user_salaries: {
+      user_salary_history: {
         Row: {
+          id: string;
           user_id: string;
-          salario_mensual: number | null;
-          updated_at: string;
+          salario_mensual: number;
+          vigente_desde: string;
+          es_correccion: boolean;
+          created_by: string | null;
+          created_at: string;
         };
-        Insert: {
-          user_id: string;
-          salario_mensual?: number | null;
-        };
-        Update: {
-          salario_mensual?: number | null;
-        };
+        Insert: never;
+        Update: never;
         Relationships: [
           {
-            foreignKeyName: "user_salaries_user_id_fkey";
+            foreignKeyName: "user_salary_history_user_id_fkey";
             columns: ["user_id"];
-            isOneToOne: true;
+            isOneToOne: false;
             referencedRelation: "users";
             referencedColumns: ["id"];
           }
@@ -339,6 +337,22 @@ export interface Database {
         Args: Record<string, never>;
         Returns: number;
       };
+      set_client_tarifa: {
+        Args: { p_client_id: string; p_tarifa_mensual: number };
+        Returns: Database["public"]["Tables"]["client_rate_history"]["Row"];
+      };
+      correct_client_tarifa_historico: {
+        Args: { p_client_id: string; p_tarifa_mensual: number; p_vigente_desde: string };
+        Returns: Database["public"]["Tables"]["client_rate_history"]["Row"];
+      };
+      set_user_salario: {
+        Args: { p_user_id: string; p_salario_mensual: number };
+        Returns: Database["public"]["Tables"]["user_salary_history"]["Row"];
+      };
+      correct_user_salario_historico: {
+        Args: { p_user_id: string; p_salario_mensual: number; p_vigente_desde: string };
+        Returns: Database["public"]["Tables"]["user_salary_history"]["Row"];
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
@@ -347,8 +361,8 @@ export interface Database {
 
 export type UserRow = Database["public"]["Tables"]["users"]["Row"];
 export type ClientRow = Database["public"]["Tables"]["clients"]["Row"];
-export type ClientRateRow = Database["public"]["Tables"]["client_rates"]["Row"];
-export type UserSalaryRow = Database["public"]["Tables"]["user_salaries"]["Row"];
+export type ClientRateHistoryRow = Database["public"]["Tables"]["client_rate_history"]["Row"];
+export type UserSalaryHistoryRow = Database["public"]["Tables"]["user_salary_history"]["Row"];
 export type ActivityRow = Database["public"]["Tables"]["activities"]["Row"];
 export type ClientAssignmentRow =
   Database["public"]["Tables"]["client_assignments"]["Row"];

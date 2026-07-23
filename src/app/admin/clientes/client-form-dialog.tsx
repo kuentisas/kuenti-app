@@ -21,7 +21,7 @@ interface ClientFormDialogProps {
   mode: "create" | "edit";
   client?: { id: string; nombre: string; nit: string | null; tarifa_mensual: number };
   // false para supervisor: el campo de tarifa queda ausente del DOM, no
-  // solo oculto — RLS de client_rates lo bloquearía igual, pero acá se
+  // solo oculto — set_client_tarifa exige is_admin() igual, pero acá se
   // evita mostrarlo desde el vamos.
   canEditTarifa?: boolean;
 }

@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { bogotaMonthKey, endOfBogotaMonth, startOfBogotaMonth } from "@/lib/dates";
+import { vigenteEnMes } from "@/lib/vigencia";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -28,7 +29,6 @@ interface EntryRow {
 interface ClientRow {
   id: string;
   nombre: string;
-  tarifa_mensual: number;
 }
 
 function statusFor(seconds: number, costo: number, tarifa: number) {
@@ -57,42 +57,41 @@ export default async function RentabilidadPage({
 
   const supabase = createClient();
 
-  const [{ data: settings }, { data: clientsRaw }, { data: entriesRaw }, { data: salariesRaw }] =
+  const [{ data: settings }, { data: clientsRaw }, { data: entriesRaw }, { data: rateHistoryRaw }, { data: salaryHistoryRaw }] =
     await Promise.all([
       supabase.from("app_settings").select("costo_hora_promedio").eq("id", true).single(),
-      supabase
-        .from("clients")
-        .select("id, nombre, client_rates(tarifa_mensual)")
-        .eq("activo", true)
-        .order("nombre"),
+      supabase.from("clients").select("id, nombre").eq("activo", true).order("nombre"),
       supabase
         .from("time_entries")
         .select("duration_seconds, client_id, user_id")
         .gte("start_time", monthStart.toISOString())
         .lte("start_time", monthEnd.toISOString())
         .not("duration_seconds", "is", null),
-      supabase.from("user_salaries").select("user_id, salario_mensual"),
+      // Se trae TODO el historial (no solo "lo vigente hoy") porque
+      // rentabilidad puede consultar un mes pasado: el valor correcto para
+      // ese mes es el vigente EN ESE MOMENTO, no el actual.
+      supabase.from("client_rate_history").select("client_id, tarifa_mensual, vigente_desde"),
+      supabase.from("user_salary_history").select("user_id, salario_mensual, vigente_desde"),
     ]);
 
   const costoHoraPromedio = settings?.costo_hora_promedio ?? 0;
-  const clients = ((clientsRaw ?? []) as unknown as (ClientRow & {
-    client_rates: { tarifa_mensual: number | null } | null;
-  })[]).map((c) => ({
+
+  const tarifaVigenteByClient = vigenteEnMes(rateHistoryRaw ?? [], (r) => r.client_id, mesStr);
+  const clients = ((clientsRaw ?? []) as ClientRow[]).map((c) => ({
     id: c.id,
     nombre: c.nombre,
-    tarifa_mensual: c.client_rates?.tarifa_mensual ?? 0,
+    tarifa_mensual: tarifaVigenteByClient.get(c.id)?.tarifa_mensual ?? 0,
   }));
   const entries = (entriesRaw ?? []) as EntryRow[];
 
-  // Costo/hora real por colaboradora = salario_mensual ÷ 182h. Si no tiene
-  // salario cargado todavía, cae al costo_hora_promedio global (fallback
-  // ya confirmado, para no romper rentabilidad mientras se cargan salarios
-  // gradualmente).
+  // Costo/hora real por colaboradora = salario_mensual (vigente en ESTE
+  // mes, no el más reciente) ÷ 182h. Si no tenía salario vigente ese mes
+  // todavía, cae al costo_hora_promedio global (fallback ya confirmado,
+  // para no romper rentabilidad mientras se cargan salarios gradualmente).
+  const salarioVigenteByUser = vigenteEnMes(salaryHistoryRaw ?? [], (r) => r.user_id, mesStr);
   const costoHoraByUser = new Map<string, number>();
-  for (const s of salariesRaw ?? []) {
-    if (s.salario_mensual != null) {
-      costoHoraByUser.set(s.user_id, s.salario_mensual / HORAS_MES);
-    }
+  for (const [userId, row] of salarioVigenteByUser) {
+    costoHoraByUser.set(userId, row.salario_mensual / HORAS_MES);
   }
 
   const secondsByClient = new Map<string, number>();

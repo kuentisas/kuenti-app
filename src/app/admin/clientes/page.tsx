@@ -4,6 +4,8 @@ import { ExternalLink } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserProfile } from "@/lib/current-user";
 import { canViewFinance } from "@/lib/roles";
+import { bogotaMonthKey } from "@/lib/dates";
+import { masReciente, estaVigente, formatMesVigencia } from "@/lib/vigencia";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
@@ -22,19 +24,31 @@ export default async function ClientesPage() {
   const canSeeTarifa = canViewFinance(profile?.role ?? "colaboradora");
 
   const supabase = createClient();
-  const { data: clientsRaw } = await supabase
-    .from("clients")
-    .select("id, nombre, nit, activo, client_rates(tarifa_mensual)")
-    .order("nombre");
+  const [{ data: clientsRaw }, { data: rateHistoryRaw }] = await Promise.all([
+    supabase.from("clients").select("id, nombre, nit, activo").order("nombre"),
+    canSeeTarifa
+      ? supabase.from("client_rate_history").select("client_id, tarifa_mensual, vigente_desde")
+      : Promise.resolve({ data: [] }),
+  ]);
 
-  const clients = (clientsRaw ?? []).map((c) => ({
-    id: c.id,
-    nombre: c.nombre,
-    nit: c.nit,
-    activo: c.activo,
-    tarifa_mensual: (c.client_rates as unknown as { tarifa_mensual: number | null } | null)
-      ?.tarifa_mensual ?? 0,
-  }));
+  const mesActualKey = bogotaMonthKey();
+  // El valor más reciente jamás fijado, aunque todavía no haya entrado en
+  // vigencia (regla: un cambio normal aplica desde el mes siguiente) — se
+  // aclara en la UI cuándo entra en vigor si todavía no aplica hoy.
+  const tarifaPorCliente = masReciente(rateHistoryRaw ?? [], (r) => r.client_id);
+
+  const clients = (clientsRaw ?? []).map((c) => {
+    const tarifa = tarifaPorCliente.get(c.id);
+    return {
+      id: c.id,
+      nombre: c.nombre,
+      nit: c.nit,
+      activo: c.activo,
+      tarifa_mensual: tarifa?.tarifa_mensual ?? 0,
+      tarifaVigente: tarifa ? estaVigente(tarifa.vigente_desde, mesActualKey) : true,
+      tarifaVigenteDesde: tarifa?.vigente_desde ?? null,
+    };
+  });
 
   return (
     <div className="space-y-6">
@@ -78,7 +92,18 @@ export default async function ClientesPage() {
                   <TableCell className="text-muted-foreground">{client.nit ?? "—"}</TableCell>
                   {canSeeTarifa && (
                     <TableCell className="text-right font-mono">
-                      {client.tarifa_mensual > 0 ? formatCOP(client.tarifa_mensual) : "—"}
+                      {client.tarifa_mensual > 0 ? (
+                        <>
+                          {formatCOP(client.tarifa_mensual)}
+                          {!client.tarifaVigente && client.tarifaVigenteDesde && (
+                            <span className="ml-1 font-sans text-xs text-muted-foreground">
+                              (vigente desde {formatMesVigencia(client.tarifaVigenteDesde)})
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        "—"
+                      )}
                     </TableCell>
                   )}
                   <TableCell>
