@@ -92,6 +92,19 @@ Gotcha de CSS a tener en cuenta: por default, un ítem flex/grid no se encoge po
 
 Los ítems de la barra inferior usan `mobileLabel` (opcional, en `NavItem`) cuando la etiqueta completa no entra en 375px sin superponerse a la del vecino (son palabras sueltas, no hacen wrap) — el sidebar de escritorio siempre usa `label` completo.
 
+## Estado general del proyecto Kuenti (más allá de esta app)
+
+**Este repositorio (`kuenti-app`) es solo la pieza de control de horas dentro de un proyecto más grande — no asumir que es todo lo que existe.** Contexto de infraestructura reportado por el usuario (no verificado desde este repo, salvo donde se indica):
+
+- **Meta Business Manager**: creado, en proceso de verificación de empresa (pendiente de que Meta la apruebe).
+- **WhatsApp Business**: número ya registrado, pendiente de conectarlo vía Embedded Signup con Coexistence (permite seguir usando la app normal de WhatsApp Business junto con la API, en vez de migrar por completo).
+- **Atención al cliente / chat**: decisión tomada de usar **Chatwoot self-hosted** (no la versión cloud de Chatwoot), corriendo en un VPS de Hetzner — el VPS todavía **no está aprovisionado**.
+- **kuenti.co**: dominio ya en producción, sirviendo por ahora una página "coming soon" en Vercel — probablemente un proyecto de Vercel separado de `kuenti-app`, no confirmado desde este repo.
+- **GitHub**: el proyecto vive bajo la cuenta/organización `kuentisas`, separada de la cuenta personal `armogas` del usuario. Ambas cuentas tienen su propia llave SSH configuradas en esta máquina — confirmado en `~/.ssh/config`, hosts `github-kuenti` (usa `~/.ssh/id_kuenti`) y `github-armogas` (usa `~/.ssh/id_armogas`). El remote de este repo usa el alias `github-kuenti`.
+- **DNS**: Cloudflare gestiona el DNS de `kuenti.co`. Correo corporativo vía Zoho Mail, con SPF/DKIM/DMARC ya configurados.
+
+Si una tarea futura toca WhatsApp, Chatwoot, el dominio kuenti.co, o el correo corporativo, es probable que involucre otro repositorio/servicio, no este.
+
 ## Estado del proyecto (2026-07-23)
 
 **Completo y en producción:** timer con bloqueo cruzado y recuperación de timers huérfanos, corrección de horas con aprobación y auditoría de detalle, actividades recurrentes/eventuales sin aprobación, rol supervisor, ajustes manuales con distinción visual de origen (autoajuste vs. aprobado por admin), badge de correcciones resueltas para la colaboradora, rentabilidad con manejo de casos límite (sin tarifa, sin salario, sin actividad este mes) e historial de vigencia real para tarifas/salarios, carga masiva de actividades por línea (soporta pegar una columna de Excel), fixes de responsive móvil (375px–768px verificado). Se completó una auditoría exhaustiva pre-producción (zona horaria, timers, permisos, integridad financiera) con pruebas reales contra Supabase; los hallazgos técnicos quedaron corregidos.
