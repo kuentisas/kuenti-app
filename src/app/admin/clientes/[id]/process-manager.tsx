@@ -19,6 +19,7 @@ import { CSS } from "@dnd-kit/utilities";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -253,7 +254,7 @@ export function ProcessManager({
   function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     const nombres = newName
-      .split(",")
+      .split("\n")
       .map((n) => n.trim())
       .filter((n) => n.length > 0);
     if (nombres.length === 0) return;
@@ -272,20 +273,22 @@ export function ProcessManager({
 
   return (
     <div className="space-y-3">
-      <form onSubmit={handleCreate} className="flex gap-2">
-        <Input
+      <form onSubmit={handleCreate} className="space-y-2">
+        <Textarea
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
           placeholder="Nombre de la actividad"
+          rows={3}
         />
-        <Button type="submit" disabled={isPending} className="shrink-0 gap-2">
+        <Button type="submit" disabled={isPending} className="gap-2">
           <Plus className="h-4 w-4" />
           Agregar
         </Button>
       </form>
       <p className="text-xs text-muted-foreground">
-        Puedes agregar varias actividades a la vez separándolas por comas, por ejemplo:{" "}
-        <span className="font-medium">Nómina, IVA, Contabilidad</span>.
+        Puedes agregar varias actividades a la vez, una por línea. También puedes copiar una
+        columna completa de Excel y pegarla acá directamente, por ejemplo:{" "}
+        <span className="font-medium whitespace-pre-line">{"Nómina\nIVA\nContabilidad"}</span>.
       </p>
 
       {items.length === 0 ? (
