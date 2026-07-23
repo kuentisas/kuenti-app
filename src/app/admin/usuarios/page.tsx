@@ -20,6 +20,7 @@ import { UserStatusActions } from "./user-status-actions";
 import { SalaryDialog } from "./salary-dialog";
 import { SalaryHistoryDialog } from "./salary-history-dialog";
 import { ResetPasswordDialog } from "./reset-password-dialog";
+import { EditMemberDialog } from "./edit-member-dialog";
 
 export default async function UsuariosPage() {
   const profile = await getCurrentUserProfile();
@@ -196,6 +197,11 @@ export default async function UsuariosPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
+                        {!u.deleted_at &&
+                          (callerRole === "admin" ||
+                            (callerRole === "supervisor" && u.role === "colaboradora")) && (
+                            <EditMemberDialog userId={u.id} nombre={u.nombre} email={u.email} />
+                          )}
                         {!u.deleted_at && (
                           <ResetPasswordDialog userId={u.id} nombre={u.nombre} />
                         )}

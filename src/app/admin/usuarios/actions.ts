@@ -81,6 +81,78 @@ export async function createTeamMember(formData: FormData) {
   return { error: null };
 }
 
+const updateProfileSchema = z.object({
+  userId: z.string().uuid(),
+  nombre: z.string().trim().min(1, "El nombre es requerido"),
+  email: z.string().trim().email("Correo inválido"),
+});
+
+// Nombre y correo editables directamente porque esta app nunca dependió
+// de un link de invitación/verificación por correo (el admin asigna la
+// contraseña directamente desde el principio, ver createTeamMember).
+// Cambiar el email vía service_role + email_confirm:true es inmediato,
+// sin paso de verificación — confirmado contra Supabase real, es un
+// camino distinto al de un usuario cambiándose su propio correo desde
+// su sesión (ese sí pide confirmación).
+//
+// Mismo criterio que createTeamMember: un supervisor solo puede editar
+// miembros con rol colaboradora — nunca admin ni otro supervisor, para
+// que no pueda cambiarle el correo de login a una cuenta con más
+// privilegios y luego pedir un reset de contraseña a un correo que él
+// controla.
+export async function updateTeamMemberProfile(userId: string, nombre: string, email: string) {
+  const guard = await requireRole(["admin", "supervisor"]);
+  if ("error" in guard) return guard;
+
+  const parsed = updateProfileSchema.safeParse({ userId, nombre, email });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Datos inválidos" };
+  }
+
+  const supabase = createClient();
+
+  if (guard.profile.role === "supervisor") {
+    const { data: target } = await supabase
+      .from("users")
+      .select("role")
+      .eq("id", parsed.data.userId)
+      .maybeSingle();
+    if (!target || target.role !== "colaboradora") {
+      return { error: "Un supervisor solo puede editar miembros del equipo (colaboradoras)." };
+    }
+  }
+
+  let adminClient;
+  try {
+    adminClient = createAdminClient();
+  } catch {
+    return {
+      error: "Falta configurar SUPABASE_SERVICE_ROLE_KEY en el servidor para poder editar el correo.",
+    };
+  }
+
+  const { error: authError } = await adminClient.auth.admin.updateUserById(parsed.data.userId, {
+    email: parsed.data.email,
+    email_confirm: true,
+  });
+  if (authError) return { error: authError.message };
+
+  // public.users.email es una copia desnormalizada (el trigger que la
+  // llena solo corre en el INSERT de auth.users, no en UPDATE) — sin
+  // este segundo paso quedaría desincronizada del correo real de login.
+  const { data, error } = await supabase
+    .from("users")
+    .update({ nombre: parsed.data.nombre, email: parsed.data.email })
+    .eq("id", parsed.data.userId)
+    .select()
+    .maybeSingle();
+  if (error) return { error: error.message };
+  if (!data) return { error: "No se pudo actualizar el perfil (sin permiso, o el usuario ya no existe)." };
+
+  revalidatePath("/admin/usuarios");
+  return { error: null };
+}
+
 const resetPasswordSchema = z.object({
   userId: z.string().uuid(),
   password: z.string().min(8, "La contraseña debe tener al menos 8 caracteres"),
