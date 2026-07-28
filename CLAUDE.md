@@ -99,17 +99,18 @@ Los ítems de la barra inferior usan `mobileLabel` (opcional, en `NavItem`) cuan
 - **Meta Business Manager**: creado, en proceso de verificación de empresa (pendiente de que Meta la apruebe).
 - **WhatsApp Business**: número ya registrado, pendiente de conectarlo vía Embedded Signup con Coexistence (permite seguir usando la app normal de WhatsApp Business junto con la API, en vez de migrar por completo).
 - **Atención al cliente / chat**: decisión tomada de usar **Chatwoot self-hosted** (no la versión cloud de Chatwoot), corriendo en un VPS de Hetzner — el VPS todavía **no está aprovisionado**.
-- **kuenti.co**: dominio ya en producción, sirviendo por ahora una página "coming soon" en Vercel — probablemente un proyecto de Vercel separado de `kuenti-app`, no confirmado desde este repo.
+- **kuenti.co**: dominio ya en producción, sirviendo por ahora una página "coming soon" en Vercel — confirmado que es un proyecto de Vercel **distinto** (`kuenti-coming-soon`), no `kuenti-app` (verificado con `vercel domains inspect kuenti.co`).
+- **gestion.kuenti.co**: sí apunta a **este** proyecto (`kuenti-app`) — agregado como dominio en Vercel + registro `A` en Cloudflare (`76.76.21.21`, DNS only/sin proxy) apuntando a la IP de Vercel. Verificado funcionando en producción con SSL válido.
 - **GitHub**: el proyecto vive bajo la cuenta/organización `kuentisas`, separada de la cuenta personal `armogas` del usuario. Ambas cuentas tienen su propia llave SSH configuradas en esta máquina — confirmado en `~/.ssh/config`, hosts `github-kuenti` (usa `~/.ssh/id_kuenti`) y `github-armogas` (usa `~/.ssh/id_armogas`). El remote de este repo usa el alias `github-kuenti`.
 - **DNS**: Cloudflare gestiona el DNS de `kuenti.co`. Correo corporativo vía Zoho Mail, con SPF/DKIM/DMARC ya configurados.
 
 Si una tarea futura toca WhatsApp, Chatwoot, el dominio kuenti.co, o el correo corporativo, es probable que involucre otro repositorio/servicio, no este.
 
-## Estado del proyecto (2026-07-23)
+## Estado del proyecto (2026-07-27)
 
-**Completo y en producción:** timer con bloqueo cruzado y recuperación de timers huérfanos, corrección de horas con aprobación y auditoría de detalle, actividades recurrentes/eventuales sin aprobación, rol supervisor, ajustes manuales con distinción visual de origen (autoajuste vs. aprobado por admin), badge de correcciones resueltas para la colaboradora, rentabilidad con manejo de casos límite (sin tarifa, sin salario, sin actividad este mes) e historial de vigencia real para tarifas/salarios, carga masiva de actividades por línea (soporta pegar una columna de Excel), fixes de responsive móvil (375px–768px verificado). Se completó una auditoría exhaustiva pre-producción (zona horaria, timers, permisos, integridad financiera) con pruebas reales contra Supabase; los hallazgos técnicos quedaron corregidos.
+**Completo y en producción:** timer con bloqueo cruzado y recuperación de timers huérfanos, corrección de horas con aprobación y auditoría de detalle, actividades recurrentes/eventuales sin aprobación, rol supervisor, ajustes manuales con distinción visual de origen (autoajuste vs. aprobado por admin), badge de correcciones resueltas para la colaboradora, rentabilidad con manejo de casos límite (sin tarifa, sin salario, sin actividad este mes) e historial de vigencia real para tarifas/salarios, carga masiva de actividades por línea (soporta pegar una columna de Excel), fixes de responsive móvil (375px–768px verificado), edición de nombre/correo de miembros del equipo (con la misma restricción de rol que la creación: supervisor solo edita colaboradoras), inputs numéricos de tarifa/salario/costo-hora sin restricción de redondeo (`step="1"`, antes rechazaban valores que no fueran múltiplos de 1000). Se completó una auditoría exhaustiva pre-producción (zona horaria, timers, permisos, integridad financiera) con pruebas reales contra Supabase; los hallazgos técnicos quedaron corregidos. `gestion.kuenti.co` conectado y funcionando en producción.
 
-**En curso:** carga de clientes y actividades reales a producción (la base de prueba ya se limpió por completo — solo queda el admin real).
+**En curso:** carga de clientes y actividades reales a producción (la base de prueba ya se limpió por completo — solo queda el admin real, más los clientes/equipo reales que se vayan cargando).
 
 **Pendiente / decisiones de producto sin resolver todavía:**
 - Modo offline completo (cola de sincronización real) — ver sección de arriba. No construir sin que el equipo confirme que es un problema recurrente en la práctica.
