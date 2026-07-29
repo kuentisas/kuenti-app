@@ -430,6 +430,7 @@ export function TimerPanel({
                       {entry.endTime && (
                         <RequestCorrectionDialog
                           timeEntryId={entry.id}
+                          currentStartTime={entry.startTime}
                           currentEndTime={entry.endTime}
                         />
                       )}

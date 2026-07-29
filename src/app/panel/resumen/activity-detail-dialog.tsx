@@ -118,7 +118,11 @@ export function ActivityDetailDialog({
                 </TableCell>
                 <TableCell>
                   {s.endTime && (
-                    <RequestCorrectionDialog timeEntryId={s.id} currentEndTime={s.endTime} />
+                    <RequestCorrectionDialog
+                      timeEntryId={s.id}
+                      currentStartTime={s.startTime}
+                      currentEndTime={s.endTime}
+                    />
                   )}
                 </TableCell>
               </TableRow>

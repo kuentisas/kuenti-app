@@ -40,6 +40,7 @@ interface EventualActivityRow {
 interface PendingCorrectionRow {
   id: string;
   motivo: string;
+  nueva_hora_inicio_sugerida: string | null;
   nueva_hora_fin_sugerida: string;
   created_at: string;
   users: { nombre: string } | null;
@@ -123,7 +124,7 @@ export default async function AdminDashboardPage({
   const { data: pendingCorrectionsRaw } = await supabase
     .from("activity_corrections")
     .select(
-      "id, motivo, nueva_hora_fin_sugerida, created_at, users!user_id(nombre), time_entries(start_time, end_time, clients(nombre), activities(nombre))"
+      "id, motivo, nueva_hora_inicio_sugerida, nueva_hora_fin_sugerida, created_at, users!user_id(nombre), time_entries(start_time, end_time, clients(nombre), activities(nombre))"
     )
     .eq("estado", "pendiente")
     .order("created_at", { ascending: true });
@@ -392,7 +393,8 @@ export default async function AdminDashboardPage({
               <TableRow>
                 <TableHead>Miembro</TableHead>
                 <TableHead>Cliente / Actividad</TableHead>
-                <TableHead>Hora actual → sugerida</TableHead>
+                <TableHead>Inicio actual → sugerido</TableHead>
+                <TableHead>Fin actual → sugerido</TableHead>
                 <TableHead>Motivo</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
@@ -400,7 +402,7 @@ export default async function AdminDashboardPage({
             <TableBody>
               {pendingCorrections.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center text-muted-foreground">
                     No hay correcciones pendientes.
                   </TableCell>
                 </TableRow>
@@ -411,6 +413,19 @@ export default async function AdminDashboardPage({
                   <TableCell>
                     {c.time_entries?.clients?.nombre ?? "—"} ·{" "}
                     {c.time_entries?.activities?.nombre ?? "—"}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {c.nueva_hora_inicio_sugerida ? (
+                      <>
+                        {c.time_entries?.start_time
+                          ? formatDateTime(c.time_entries.start_time)
+                          : "—"}
+                        {" → "}
+                        {formatDateTime(c.nueva_hora_inicio_sugerida)}
+                      </>
+                    ) : (
+                      "—"
+                    )}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {c.time_entries?.end_time ? formatDateTime(c.time_entries.end_time) : "—"}

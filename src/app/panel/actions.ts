@@ -4,7 +4,17 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { createClient } from "@/lib/supabase/server";
-import { bogotaDatetimeLocalToISOString, bogotaMonthKey } from "@/lib/dates";
+import { BOGOTA_TZ, bogotaDatetimeLocalToISOString, bogotaMonthKey } from "@/lib/dates";
+
+function formatHoraBogota(iso: string) {
+  return new Date(iso).toLocaleString("es-CO", {
+    timeZone: BOGOTA_TZ,
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
 
 export async function startActivity(clientId: string, activityId: string) {
   const supabase = createClient();
@@ -70,27 +80,71 @@ const requestCorrectionSchema = z.object({
   timeEntryId: z.string().uuid(),
   nuevaHoraFin: z.string().min(1, "La hora es requerida"),
   motivo: z.string().trim().min(1, "El motivo es requerido"),
+  nuevaHoraInicio: z.string().min(1).nullable(),
 });
 
 export async function requestCorrection(
   timeEntryId: string,
   nuevaHoraFin: string,
-  motivo: string
+  motivo: string,
+  nuevaHoraInicio: string | null = null
 ) {
-  const parsed = requestCorrectionSchema.safeParse({ timeEntryId, nuevaHoraFin, motivo });
+  const parsed = requestCorrectionSchema.safeParse({
+    timeEntryId,
+    nuevaHoraFin,
+    motivo,
+    nuevaHoraInicio,
+  });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Datos inválidos" };
   }
 
   const supabase = createClient();
+  const nuevaHoraFinISO = bogotaDatetimeLocalToISOString(parsed.data.nuevaHoraFin);
+  const nuevaHoraInicioISO = parsed.data.nuevaHoraInicio
+    ? bogotaDatetimeLocalToISOString(parsed.data.nuevaHoraInicio)
+    : null;
   const { error } = await supabase.from("activity_corrections").insert({
     time_entry_id: parsed.data.timeEntryId,
     user_id: (await supabase.auth.getUser()).data.user?.id ?? "",
     motivo: parsed.data.motivo,
-    nueva_hora_fin_sugerida: bogotaDatetimeLocalToISOString(parsed.data.nuevaHoraFin),
+    nueva_hora_fin_sugerida: nuevaHoraFinISO,
+    nueva_hora_inicio_sugerida: nuevaHoraInicioISO,
   });
 
-  if (error) return { error: error.message };
+  if (error) {
+    // El mensaje crudo de RLS ("new row violates row-level security
+    // policy...") no le dice nada a la colaboradora. La policy de INSERT
+    // (0027) exige coalesce(nueva_hora_inicio_sugerida, start_time) <=
+    // nueva_hora_fin_sugerida <= now() — se traduce a un mensaje
+    // accionable buscando el registro original para saber cuál condición
+    // falló.
+    if (error.code === "42501") {
+      const { data: entry } = await supabase
+        .from("time_entries")
+        .select("start_time")
+        .eq("id", parsed.data.timeEntryId)
+        .maybeSingle();
+
+      const horaInicioEfectiva = nuevaHoraInicioISO ?? entry?.start_time ?? null;
+
+      if (horaInicioEfectiva && nuevaHoraFinISO < horaInicioEfectiva) {
+        return {
+          error: nuevaHoraInicioISO
+            ? "La hora de fin no puede ser anterior a la hora de inicio que estás corrigiendo."
+            : `La hora de fin no puede ser anterior a la hora de inicio del registro (${formatHoraBogota(horaInicioEfectiva)}). Si también necesitas corregir la hora de inicio, marca la casilla correspondiente.`,
+        };
+      }
+      if (nuevaHoraFinISO > new Date().toISOString()) {
+        return { error: "La hora de fin no puede ser en el futuro." };
+      }
+      if (nuevaHoraInicioISO && nuevaHoraInicioISO > new Date().toISOString()) {
+        return { error: "La hora de inicio no puede ser en el futuro." };
+      }
+      return { error: "No se pudo enviar la corrección para este registro." };
+    }
+    return { error: error.message };
+  }
 
   revalidatePath("/panel");
   return { error: null };

@@ -13,6 +13,7 @@ export interface ResolvedCorrection {
   id: string;
   estado: "aprobada" | "rechazada";
   nota_revision: string | null;
+  nueva_hora_inicio_sugerida: string | null;
   nueva_hora_fin_sugerida: string;
   fecha_revision: string;
   clientNombre: string;
@@ -85,7 +86,9 @@ export function ResolvedCorrectionsBanner({
               </div>
               <p className="mt-1 text-muted-foreground">
                 {c.estado === "aprobada"
-                  ? `Hora corregida a las ${formatDateTime(c.nueva_hora_fin_sugerida)}.`
+                  ? c.nueva_hora_inicio_sugerida
+                    ? `Corregido: inicio ${formatDateTime(c.nueva_hora_inicio_sugerida)}, fin ${formatDateTime(c.nueva_hora_fin_sugerida)}.`
+                    : `Hora corregida a las ${formatDateTime(c.nueva_hora_fin_sugerida)}.`
                   : "Tu solicitud fue rechazada."}
                 {c.estado === "rechazada" && c.nota_revision && (
                   <> Motivo: {c.nota_revision}</>

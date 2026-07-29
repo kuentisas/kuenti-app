@@ -15,7 +15,7 @@ export default async function AprobacionesPage() {
   const { data: correctionsRaw } = await supabase
     .from("activity_corrections")
     .select(
-      "id, estado, fecha_revision, nota_revision, motivo, nueva_hora_fin_sugerida, hora_fin_original, solicitante:users!user_id(nombre), revisor:users!revisado_por(nombre), time_entries(clients(nombre), activities(nombre))"
+      "id, estado, fecha_revision, nota_revision, motivo, nueva_hora_inicio_sugerida, nueva_hora_fin_sugerida, hora_inicio_original, hora_fin_original, solicitante:users!user_id(nombre), revisor:users!revisado_por(nombre), time_entries(clients(nombre), activities(nombre))"
     )
     .neq("estado", "pendiente")
     .order("fecha_revision", { ascending: false })

@@ -21,7 +21,9 @@ export interface ReviewedCorrectionRow {
   fecha_revision: string;
   nota_revision: string | null;
   motivo: string;
+  nueva_hora_inicio_sugerida: string | null;
   nueva_hora_fin_sugerida: string;
+  hora_inicio_original: string | null;
   hora_fin_original: string | null;
   solicitante: { nombre: string } | null;
   revisor: { nombre: string } | null;
@@ -109,13 +111,27 @@ export function CorrectionsHistoryTable({
                 <TableRow key={`${c.id}-detail`} className="bg-secondary/30 hover:bg-secondary/30">
                   <TableCell colSpan={6}>
                     <div className="grid gap-x-6 gap-y-2 py-2 text-sm sm:grid-cols-2">
+                      {c.nueva_hora_inicio_sugerida && (
+                        <>
+                          <div>
+                            <span className="text-muted-foreground">Inicio original: </span>
+                            {formatHora(c.hora_inicio_original)}
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">
+                              Inicio {c.estado === "aprobada" ? "aprobado" : "sugerido"}:{" "}
+                            </span>
+                            {formatHora(c.nueva_hora_inicio_sugerida)}
+                          </div>
+                        </>
+                      )}
                       <div>
-                        <span className="text-muted-foreground">Hora original: </span>
+                        <span className="text-muted-foreground">Fin original: </span>
                         {formatHora(c.hora_fin_original)}
                       </div>
                       <div>
                         <span className="text-muted-foreground">
-                          Hora {c.estado === "aprobada" ? "aprobada" : "sugerida"}:{" "}
+                          Fin {c.estado === "aprobada" ? "aprobado" : "sugerido"}:{" "}
                         </span>
                         {formatHora(c.nueva_hora_fin_sugerida)}
                       </div>

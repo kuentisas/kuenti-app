@@ -48,6 +48,7 @@ interface ResolvedCorrectionRow {
   id: string;
   estado: "aprobada" | "rechazada";
   nota_revision: string | null;
+  nueva_hora_inicio_sugerida: string | null;
   nueva_hora_fin_sugerida: string;
   fecha_revision: string;
   time_entries: {
@@ -137,7 +138,7 @@ export default async function PanelPage() {
   const { data: resolvedCorrectionsRaw } = await supabase
     .from("activity_corrections")
     .select(
-      "id, estado, nota_revision, nueva_hora_fin_sugerida, fecha_revision, time_entries(clients(nombre), activities(nombre))"
+      "id, estado, nota_revision, nueva_hora_inicio_sugerida, nueva_hora_fin_sugerida, fecha_revision, time_entries(clients(nombre), activities(nombre))"
     )
     .eq("user_id", user.id)
     .neq("estado", "pendiente")
@@ -150,6 +151,7 @@ export default async function PanelPage() {
     id: c.id,
     estado: c.estado,
     nota_revision: c.nota_revision,
+    nueva_hora_inicio_sugerida: c.nueva_hora_inicio_sugerida,
     nueva_hora_fin_sugerida: c.nueva_hora_fin_sugerida,
     fecha_revision: c.fecha_revision,
     clientNombre: c.time_entries?.clients?.nombre ?? "—",

@@ -257,11 +257,13 @@ export interface Database {
           time_entry_id: string;
           user_id: string;
           motivo: string;
+          nueva_hora_inicio_sugerida: string | null;
           nueva_hora_fin_sugerida: string;
           estado: CorrectionEstado;
           revisado_por: string | null;
           nota_revision: string | null;
           fecha_revision: string | null;
+          hora_inicio_original: string | null;
           hora_fin_original: string | null;
           visto_por_solicitante: boolean;
           created_at: string;
@@ -271,6 +273,7 @@ export interface Database {
           time_entry_id: string;
           user_id: string;
           motivo: string;
+          nueva_hora_inicio_sugerida?: string | null;
           nueva_hora_fin_sugerida: string;
         };
         Update: never;
