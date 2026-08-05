@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserProfile } from "@/lib/current-user";
 import { canViewFinance } from "@/lib/roles";
-import { bogotaDateKey, bogotaMonthKey } from "@/lib/dates";
+import { bogotaDateKey } from "@/lib/dates";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
@@ -11,25 +11,25 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { FileSpreadsheet } from "lucide-react";
 import { formatDurationShort, secondsToHours } from "@/lib/format";
 import { DateRangeForm } from "./date-range-form";
+import { resolveReportRange } from "./range";
+import { buildTeamBreakdown, type TeamEntryRow } from "./breakdown";
 
 // 42h/semana, misma constante que rentabilidad — jornada legal Colombia.
 const HORAS_SEMANA_LEGAL = 42;
 
-interface EntryRow {
-  duration_seconds: number | null;
-  start_time: string;
-  clients: { id: string; nombre: string } | null;
-  users: {
-    id: string;
-    nombre: string;
-    activo: boolean;
-    deleted_at: string | null;
-  } | null;
-}
+type EntryRow = TeamEntryRow;
 
 // Lunes de la semana calendario (hora Bogotá) a la que pertenece la
 // fecha, como clave para agrupar horas por semana ISO (aunque el rango
@@ -53,16 +53,14 @@ export default async function ReportesPage({
   const profile = await getCurrentUserProfile();
   const canSeeEficiencia = canViewFinance(profile?.role ?? "colaboradora");
 
-  const fromStr = searchParams.from ?? `${bogotaMonthKey()}-01`;
-  const toStr = searchParams.to ?? bogotaDateKey(new Date());
-
-  const fromDate = new Date(`${fromStr}T00:00:00-05:00`);
-  const toDate = new Date(`${toStr}T23:59:59.999-05:00`);
+  const { fromStr, toStr, fromDate, toDate } = resolveReportRange(searchParams);
 
   const supabase = createClient();
   const { data: raw } = await supabase
     .from("time_entries")
-    .select("duration_seconds, start_time, clients(id, nombre), users(id, nombre, activo, deleted_at)")
+    .select(
+      "duration_seconds, start_time, clients(id, nombre), activities(id, nombre), users(id, nombre, activo, deleted_at)"
+    )
     .gte("start_time", fromDate.toISOString())
     .lte("start_time", toDate.toISOString())
     .not("duration_seconds", "is", null);
@@ -125,6 +123,16 @@ export default async function ReportesPage({
     .map(([id, row]) => ({ id, ...row, horasExtra: horasExtraByUser.get(id) ?? 0 }))
     .sort((a, b) => b.seconds - a.seconds);
 
+  // Desglose cliente -> actividad por colaboradora, para el acordeón de
+  // "Por miembro del equipo" — misma agregación que usa la exportación a
+  // Excel, aplicada acá sobre las entradas ya traídas (sin query extra).
+  const teamBreakdown = buildTeamBreakdown(entries).map((member) => ({
+    ...member,
+    horasExtra: horasExtraByUser.get(member.id) ?? 0,
+  }));
+
+  const exportHref = `/admin/reportes/export?from=${fromStr}&to=${toStr}`;
+
   return (
     <div className="space-y-6">
       <div>
@@ -175,54 +183,93 @@ export default async function ReportesPage({
           </Card>
         </TabsContent>
 
-        <TabsContent value="colaboradora">
-          <Card>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Miembro</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead className="text-right">Horas totales</TableHead>
-                    <TableHead className="text-right">Horas extra</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {userRows.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={4} className="text-center text-muted-foreground">
-                        Sin registros en el rango seleccionado.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                  {userRows.map((row) => (
-                    <TableRow key={row.id}>
-                      <TableCell className="font-medium">{row.nombre}</TableCell>
-                      <TableCell>
-                        {row.deleted ? (
+        <TabsContent value="colaboradora" className="space-y-3">
+          <div className="flex items-center justify-end">
+            <Button asChild variant="secondary" className="gap-2">
+              <a href={exportHref}>
+                <FileSpreadsheet className="h-4 w-4" />
+                Exportar a Excel
+              </a>
+            </Button>
+          </div>
+
+          {teamBreakdown.length === 0 ? (
+            <Card>
+              <CardContent className="py-8 text-center text-sm text-muted-foreground">
+                Sin registros en el rango seleccionado.
+              </CardContent>
+            </Card>
+          ) : (
+            <Accordion type="multiple" className="space-y-3">
+              {teamBreakdown.map((member) => (
+                <AccordionItem
+                  key={member.id}
+                  value={member.id}
+                  className="overflow-hidden rounded-lg border bg-card text-card-foreground shadow-sm"
+                >
+                  <AccordionTrigger className="border-b bg-secondary/30 px-6 py-3 hover:no-underline">
+                    <div className="flex flex-1 flex-wrap items-center justify-between gap-3 pr-2">
+                      <span className="text-base font-medium text-kuenti-slate">
+                        {member.nombre}
+                      </span>
+                      <div className="flex items-center gap-3">
+                        {member.deleted ? (
                           <Badge variant="destructive">Eliminada</Badge>
-                        ) : !row.activo ? (
+                        ) : !member.activo ? (
                           <Badge variant="secondary">Inactiva</Badge>
                         ) : (
                           <Badge variant="success">Activa</Badge>
                         )}
-                      </TableCell>
-                      <TableCell className="text-right font-mono">
-                        {formatDurationShort(row.seconds)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {row.horasExtra > 0 ? (
-                          <Badge variant="warning">{row.horasExtra.toFixed(1)}h extra</Badge>
+                        <span className="font-mono text-sm">
+                          {formatDurationShort(member.seconds)}
+                        </span>
+                        {member.horasExtra > 0 ? (
+                          <Badge variant="warning">{member.horasExtra.toFixed(1)}h extra</Badge>
                         ) : (
-                          <span className="font-mono text-muted-foreground">—</span>
+                          <span className="font-mono text-sm text-muted-foreground">—</span>
                         )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+                      </div>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="space-y-4 px-6 pb-6 pt-4">
+                    {member.clients.length === 0 && (
+                      <p className="text-sm text-muted-foreground">
+                        Sin clientes en el rango seleccionado.
+                      </p>
+                    )}
+                    {member.clients.map((client) => (
+                      <div key={client.id} className="space-y-1.5">
+                        <div className="flex items-center justify-between text-sm font-medium text-kuenti-slate">
+                          <span>{client.nombre}</span>
+                          <span className="font-mono">{formatDurationShort(client.seconds)}</span>
+                        </div>
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="h-8">Actividad</TableHead>
+                              <TableHead className="h-8 text-right">Horas</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {client.activities.map((activity) => (
+                              <TableRow key={activity.id}>
+                                <TableCell className="py-1.5 text-muted-foreground">
+                                  {activity.nombre}
+                                </TableCell>
+                                <TableCell className="py-1.5 text-right font-mono">
+                                  {formatDurationShort(activity.seconds)}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    ))}
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          )}
         </TabsContent>
 
         {canSeeEficiencia && (
