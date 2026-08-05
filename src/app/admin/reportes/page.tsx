@@ -29,6 +29,12 @@ import { buildTeamBreakdown, type TeamEntryRow } from "./breakdown";
 // 42h/semana, misma constante que rentabilidad — jornada legal Colombia.
 const HORAS_SEMANA_LEGAL = 42;
 
+// Compartida entre el encabezado de columnas y cada AccordionTrigger de
+// "Por miembro del equipo", para que las columnas queden alineadas entre
+// filas en vez de depender de un flex/justify-between por fila (que se
+// desalinea según el largo del nombre o si hay badge de horas extra).
+const TEAM_ROW_GRID = "grid grid-cols-[1fr_110px_110px_120px] items-center gap-3";
+
 type EntryRow = TeamEntryRow;
 
 // Lunes de la semana calendario (hora Bogotá) a la que pertenece la
@@ -200,75 +206,90 @@ export default async function ReportesPage({
               </CardContent>
             </Card>
           ) : (
-            <Accordion type="multiple" className="space-y-3">
-              {teamBreakdown.map((member) => (
-                <AccordionItem
-                  key={member.id}
-                  value={member.id}
-                  className="overflow-hidden rounded-lg border bg-card text-card-foreground shadow-sm"
-                >
-                  <AccordionTrigger className="border-b bg-secondary/30 px-6 py-3 hover:no-underline">
-                    <div className="flex flex-1 flex-wrap items-center justify-between gap-3 pr-2">
-                      <span className="text-base font-medium text-kuenti-slate">
-                        {member.nombre}
-                      </span>
-                      <div className="flex items-center gap-3">
-                        {member.deleted ? (
-                          <Badge variant="destructive">Eliminada</Badge>
-                        ) : !member.activo ? (
-                          <Badge variant="secondary">Inactiva</Badge>
-                        ) : (
-                          <Badge variant="success">Activa</Badge>
-                        )}
-                        <span className="font-mono text-sm">
+            <div className="overflow-hidden rounded-lg border">
+              <div
+                className={`${TEAM_ROW_GRID} border-b bg-muted/40 px-6 py-2 text-xs font-medium text-muted-foreground`}
+              >
+                <span>Miembro</span>
+                <span>Estado</span>
+                <span className="text-right">Horas totales</span>
+                <span className="text-right">Horas extra</span>
+              </div>
+              <Accordion type="multiple">
+                {teamBreakdown.map((member) => (
+                  <AccordionItem key={member.id} value={member.id} className="bg-card">
+                    <AccordionTrigger className="px-6 py-3 hover:no-underline hover:bg-muted/30">
+                      <div className={`${TEAM_ROW_GRID} flex-1 pr-2 text-left`}>
+                        <span className="truncate text-base font-medium text-kuenti-slate">
+                          {member.nombre}
+                        </span>
+                        <span>
+                          {member.deleted ? (
+                            <Badge variant="destructive">Eliminada</Badge>
+                          ) : !member.activo ? (
+                            <Badge variant="secondary">Inactiva</Badge>
+                          ) : (
+                            <Badge variant="success">Activa</Badge>
+                          )}
+                        </span>
+                        <span className="text-right font-mono text-sm">
                           {formatDurationShort(member.seconds)}
                         </span>
-                        {member.horasExtra > 0 ? (
-                          <Badge variant="warning">{member.horasExtra.toFixed(1)}h extra</Badge>
-                        ) : (
-                          <span className="font-mono text-sm text-muted-foreground">—</span>
-                        )}
+                        <span className="text-right">
+                          {member.horasExtra > 0 ? (
+                            <Badge variant="warning">{member.horasExtra.toFixed(1)}h extra</Badge>
+                          ) : (
+                            <span className="font-mono text-sm text-muted-foreground">—</span>
+                          )}
+                        </span>
                       </div>
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="space-y-4 px-6 pb-6 pt-4">
-                    {member.clients.length === 0 && (
-                      <p className="text-sm text-muted-foreground">
-                        Sin clientes en el rango seleccionado.
-                      </p>
-                    )}
-                    {member.clients.map((client) => (
-                      <div key={client.id} className="space-y-1.5">
-                        <div className="flex items-center justify-between text-sm font-medium text-kuenti-slate">
-                          <span>{client.nombre}</span>
-                          <span className="font-mono">{formatDurationShort(client.seconds)}</span>
-                        </div>
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead className="h-8">Actividad</TableHead>
-                              <TableHead className="h-8 text-right">Horas</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {client.activities.map((activity) => (
-                              <TableRow key={activity.id}>
-                                <TableCell className="py-1.5 text-muted-foreground">
-                                  {activity.nombre}
-                                </TableCell>
-                                <TableCell className="py-1.5 text-right font-mono">
-                                  {formatDurationShort(activity.seconds)}
-                                </TableCell>
+                    </AccordionTrigger>
+                    <AccordionContent className="space-y-3 border-t bg-muted/10 px-6 pb-6 pt-4">
+                      {member.clients.length === 0 && (
+                        <p className="text-sm text-muted-foreground">
+                          Sin clientes en el rango seleccionado.
+                        </p>
+                      )}
+                      {member.clients.map((client) => (
+                        <div
+                          key={client.id}
+                          className="overflow-hidden rounded-md border bg-card"
+                        >
+                          <div className="flex items-center justify-between bg-muted/50 px-4 py-2">
+                            <span className="text-sm font-semibold text-kuenti-slate">
+                              {client.nombre}
+                            </span>
+                            <span className="font-mono text-sm">
+                              {formatDurationShort(client.seconds)}
+                            </span>
+                          </div>
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead className="h-8 pl-6">Actividad</TableHead>
+                                <TableHead className="h-8 pr-4 text-right">Horas</TableHead>
                               </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    ))}
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
-            </Accordion>
+                            </TableHeader>
+                            <TableBody>
+                              {client.activities.map((activity) => (
+                                <TableRow key={activity.id}>
+                                  <TableCell className="py-1.5 pl-6 text-muted-foreground">
+                                    {activity.nombre}
+                                  </TableCell>
+                                  <TableCell className="py-1.5 pr-4 text-right font-mono">
+                                    {formatDurationShort(activity.seconds)}
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      ))}
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
+            </div>
           )}
         </TabsContent>
 
