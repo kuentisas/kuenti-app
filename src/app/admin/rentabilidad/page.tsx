@@ -24,6 +24,8 @@ interface EntryRow {
   duration_seconds: number | null;
   client_id: string;
   user_id: string;
+  start_time: string;
+  end_time: string | null;
 }
 
 interface ClientRow {
@@ -61,12 +63,14 @@ export default async function RentabilidadPage({
     await Promise.all([
       supabase.from("app_settings").select("costo_hora_promedio").eq("id", true).single(),
       supabase.from("clients").select("id, nombre").eq("activo", true).order("nombre"),
+      // Sin filtrar duration_seconds is not null: los timers todavía activos
+      // (end_time null) también se traen, para poder sumar su tiempo
+      // transcurrido — ver isCurrentMonth más abajo.
       supabase
         .from("time_entries")
-        .select("duration_seconds, client_id, user_id")
+        .select("duration_seconds, client_id, user_id, start_time, end_time")
         .gte("start_time", monthStart.toISOString())
-        .lte("start_time", monthEnd.toISOString())
-        .not("duration_seconds", "is", null),
+        .lte("start_time", monthEnd.toISOString()),
       // Se trae TODO el historial (no solo "lo vigente hoy") porque
       // rentabilidad puede consultar un mes pasado: el valor correcto para
       // ese mes es el vigente EN ESE MOMENTO, no el actual.
@@ -94,6 +98,13 @@ export default async function RentabilidadPage({
     costoHoraByUser.set(userId, row.salario_mensual / HORAS_MES);
   }
 
+  // Un timer activo siempre pertenece al mes actual (el auto-cierre de 12h
+  // vía pg_cron y el corte de mes ya lo garantizan) — solo sumamos tiempo
+  // transcurrido de timers abiertos cuando se está viendo el mes actual, así
+  // el reporte de meses anteriores queda exactamente igual que antes de esto.
+  const isCurrentMonth = mesStr === bogotaMonthKey();
+  const nowMs = Date.now();
+
   const secondsByClient = new Map<string, number>();
   const costoByClient = new Map<string, number>();
   // Por cliente: si alguna hora se costeó con salario real y/o con el
@@ -101,8 +112,27 @@ export default async function RentabilidadPage({
   // varias colaboradoras, unas con salario cargado y otras sin él.
   const hasRealByClient = new Map<string, boolean>();
   const hasEstimatedByClient = new Map<string, boolean>();
+  // Clientes con al menos un timer corriendo ahora mismo, y cuánto tiempo
+  // transcurrido de esos timers va incluido en el total (para el badge "en
+  // curso" — ese número sigue subiendo mientras el timer no se detenga).
+  const hasActiveByClient = new Map<string, boolean>();
+  const activeSecondsByClient = new Map<string, number>();
   for (const e of entries) {
-    const seconds = e.duration_seconds ?? 0;
+    const isOpen = e.end_time == null;
+    if (isOpen && !isCurrentMonth) continue;
+
+    const seconds = isOpen
+      ? Math.max(0, Math.floor((nowMs - new Date(e.start_time).getTime()) / 1000))
+      : (e.duration_seconds ?? 0);
+
+    if (isOpen) {
+      hasActiveByClient.set(e.client_id, true);
+      activeSecondsByClient.set(
+        e.client_id,
+        (activeSecondsByClient.get(e.client_id) ?? 0) + seconds
+      );
+    }
+
     secondsByClient.set(e.client_id, (secondsByClient.get(e.client_id) ?? 0) + seconds);
 
     const costoHoraReal = costoHoraByUser.get(e.user_id);
@@ -131,7 +161,9 @@ export default async function RentabilidadPage({
       : hasReal
         ? "real"
         : null;
-    return { client, seconds, horas, costo, status, costoTipo };
+    const hasActive = hasActiveByClient.get(client.id) ?? false;
+    const activeSeconds = activeSecondsByClient.get(client.id) ?? 0;
+    return { client, seconds, horas, costo, status, costoTipo, hasActive, activeSeconds };
   });
 
   const enPerdida = rows.filter((r) => r.status.label === "En pérdida").length;
@@ -205,11 +237,26 @@ export default async function RentabilidadPage({
                   </TableCell>
                 </TableRow>
               )}
-              {rows.map(({ client, seconds, costo, status, costoTipo }) => (
+              {rows.map(({ client, seconds, costo, status, costoTipo, hasActive, activeSeconds }) => (
                 <TableRow key={client.id}>
                   <TableCell className="font-medium">{client.nombre}</TableCell>
                   <TableCell className="text-right font-mono">
-                    {formatDurationShort(seconds)}
+                    <div className="flex items-center justify-end gap-1.5">
+                      {formatDurationShort(seconds)}
+                      {hasActive && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Badge variant="warning" className="cursor-default text-[10px]">
+                              en curso
+                            </Badge>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            Incluye {formatDurationShort(activeSeconds)} de un timer activo ahora
+                            mismo — este total sigue subiendo mientras el timer siga corriendo.
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell className="text-right font-mono">
                     {client.tarifa_mensual > 0 ? formatCOP(client.tarifa_mensual) : "—"}
