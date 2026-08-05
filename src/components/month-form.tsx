@@ -1,7 +1,6 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
 import { Filter } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -18,12 +17,12 @@ export function MonthForm({
   extraParams?: Record<string, string>;
 }) {
   const router = useRouter();
-  const [month, setMonth] = useState(defaultMonth);
 
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault();
+        const month = new FormData(e.currentTarget).get("mes") as string;
         const params = new URLSearchParams({ mes: month, ...extraParams });
         router.push(`${basePath}?${params.toString()}`);
       }}
@@ -33,11 +32,18 @@ export function MonthForm({
         <Label htmlFor="mes" className="text-xs text-muted-foreground">
           Mes
         </Label>
+        {/* No controlado (defaultValue, no value/onChange): un input type="month"
+            controlado por React puede "pelear" con el widget nativo del navegador
+            mientras el usuario escribe dígitos, dejando el estado pegado en el
+            valor original — bug real reportado (Filtrar no hacía nada al escribir
+            un mes nuevo). key=defaultMonth fuerza reinicializar el valor si el
+            mes por defecto cambia desde el servidor (ej. navegación externa). */}
         <Input
+          key={defaultMonth}
           id="mes"
+          name="mes"
           type="month"
-          value={month}
-          onChange={(e) => setMonth(e.target.value)}
+          defaultValue={defaultMonth}
           className="w-40"
         />
       </div>

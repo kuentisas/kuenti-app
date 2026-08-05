@@ -1,7 +1,6 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
 import { Filter } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -16,13 +15,14 @@ export function DateRangeForm({
   defaultTo: string;
 }) {
   const router = useRouter();
-  const [from, setFrom] = useState(defaultFrom);
-  const [to, setTo] = useState(defaultTo);
 
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault();
+        const formData = new FormData(e.currentTarget);
+        const from = formData.get("from") as string;
+        const to = formData.get("to") as string;
         router.push(`/admin/reportes?from=${from}&to=${to}`);
       }}
       className="flex flex-wrap items-end gap-3"
@@ -31,11 +31,15 @@ export function DateRangeForm({
         <Label htmlFor="from" className="text-xs text-muted-foreground">
           Desde
         </Label>
+        {/* No controlado, mismo motivo que MonthForm: un input type="date"
+            controlado por React puede pelear con el widget nativo mientras
+            se escriben dígitos, dejando el valor pegado en el original. */}
         <Input
+          key={defaultFrom}
           id="from"
+          name="from"
           type="date"
-          value={from}
-          onChange={(e) => setFrom(e.target.value)}
+          defaultValue={defaultFrom}
           className="w-40"
         />
       </div>
@@ -44,10 +48,11 @@ export function DateRangeForm({
           Hasta
         </Label>
         <Input
+          key={defaultTo}
           id="to"
+          name="to"
           type="date"
-          value={to}
-          onChange={(e) => setTo(e.target.value)}
+          defaultValue={defaultTo}
           className="w-40"
         />
       </div>
