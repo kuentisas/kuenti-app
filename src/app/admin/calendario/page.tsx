@@ -1,7 +1,10 @@
+import { FileSpreadsheet } from "lucide-react";
+
 import { createClient } from "@/lib/supabase/server";
 import { BOGOTA_TZ, bogotaDateKey, bogotaMonthKey, endOfBogotaMonth, startOfBogotaMonth } from "@/lib/dates";
 import { MonthForm } from "@/components/month-form";
 import { MonthCalendar, type CalendarSession } from "@/components/month-calendar";
+import { Button } from "@/components/ui/button";
 import { ColaboradoraSelect } from "./colaboradora-select";
 
 interface EntryRow {
@@ -84,9 +87,19 @@ export default async function AdminCalendarioPage({
         </p>
       </div>
 
-      <div className="flex flex-wrap items-end gap-3">
-        <ColaboradoraSelect colaboradoras={colaboradoras ?? []} selectedId={selectedId} />
-        <MonthForm defaultMonth={mesStr} basePath="/admin/calendario" extraParams={{ colaboradora: selectedId }} />
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="flex flex-wrap items-end gap-3">
+          <ColaboradoraSelect colaboradoras={colaboradoras ?? []} selectedId={selectedId} />
+          <MonthForm defaultMonth={mesStr} basePath="/admin/calendario" extraParams={{ colaboradora: selectedId }} />
+        </div>
+        {selectedId && (
+          <Button asChild variant="secondary" className="gap-2">
+            <a href={`/admin/calendario/export?colaboradora=${selectedId}&mes=${mesStr}`}>
+              <FileSpreadsheet className="h-4 w-4" />
+              Exportar a Excel
+            </a>
+          </Button>
+        )}
       </div>
 
       {!selectedId ? (
