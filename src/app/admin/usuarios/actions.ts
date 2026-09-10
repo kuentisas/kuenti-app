@@ -118,7 +118,7 @@ export async function updateTeamMemberProfile(userId: string, nombre: string, em
       .eq("id", parsed.data.userId)
       .maybeSingle();
     if (!target || target.role !== "colaboradora") {
-      return { error: "Un supervisor solo puede editar miembros del equipo (colaboradoras)." };
+      return { error: "Un supervisor solo puede editar miembros del equipo." };
     }
   }
 

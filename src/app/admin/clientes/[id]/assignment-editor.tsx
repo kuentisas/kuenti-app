@@ -68,7 +68,7 @@ export function AssignmentEditor({
               className={colaboradora.activo ? "" : "text-muted-foreground line-through"}
             >
               {colaboradora.nombre}
-              {!colaboradora.activo && " (inactiva)"}
+              {!colaboradora.activo && " (inactivo)"}
             </Label>
           </div>
         ))}

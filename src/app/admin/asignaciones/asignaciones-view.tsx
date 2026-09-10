@@ -70,7 +70,7 @@ export function AsignacionesView({
       }
       toast({
         title: "Asignaciones eliminadas",
-        description: `Se quitaron ${result.count} asignaciones. Todos los clientes quedaron sin colaboradora.`,
+        description: `Se quitaron ${result.count} asignaciones. Todos los clientes quedaron sin miembro del equipo asignado.`,
       });
       // revalidatePath invalida el cache, pero esta vista ya está montada en
       // el cliente — sin este refresh explícito, el admin vería la tabla
@@ -109,9 +109,9 @@ export function AsignacionesView({
                 <AlertDialogTitle>¿Desasignar todos los clientes?</AlertDialogTitle>
                 <AlertDialogDescription>
                   Esto va a quitar las {totalAssignments} asignaciones actuales de{" "}
-                  {assignedClientCount} cliente(s). Todos los clientes quedarán sin ninguna
-                  colaboradora asignada, listos para reasignar desde cero. El historial de horas
-                  ya registrado no se ve afectado — esta acción solo toca las asignaciones,
+                  {assignedClientCount} cliente(s). Todos los clientes quedarán sin ningún
+                  miembro del equipo asignado, listos para reasignar desde cero. El historial de
+                  horas ya registrado no se ve afectado — esta acción solo toca las asignaciones,
                   nunca los tiempos ya cargados. No se puede deshacer.
                 </AlertDialogDescription>
               </AlertDialogHeader>
@@ -133,7 +133,7 @@ export function AsignacionesView({
       <Tabs defaultValue="por-cliente">
         <TabsList>
           <TabsTrigger value="por-cliente">Por cliente</TabsTrigger>
-          <TabsTrigger value="por-colaboradora">Por colaboradora</TabsTrigger>
+          <TabsTrigger value="por-colaboradora">Por miembro del equipo</TabsTrigger>
         </TabsList>
 
         <TabsContent value="por-cliente">
@@ -143,7 +143,7 @@ export function AsignacionesView({
                 <TableHeader>
                   <TableRow>
                     <TableHead>Cliente</TableHead>
-                    <TableHead>Colaboradora(s) asignada(s)</TableHead>
+                    <TableHead>Miembro(s) del equipo asignado(s)</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -197,7 +197,7 @@ export function AsignacionesView({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Colaboradora</TableHead>
+                    <TableHead>Miembro del equipo</TableHead>
                     <TableHead>Clientes asignados</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -205,7 +205,7 @@ export function AsignacionesView({
                   {colaboradoras.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={2} className="text-center text-muted-foreground">
-                        Aún no hay colaboradoras activas.
+                        Aún no hay miembros del equipo activos.
                       </TableCell>
                     </TableRow>
                   )}

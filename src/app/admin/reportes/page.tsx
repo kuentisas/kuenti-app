@@ -225,11 +225,11 @@ export default async function ReportesPage({
                         </span>
                         <span>
                           {member.deleted ? (
-                            <Badge variant="destructive">Eliminada</Badge>
+                            <Badge variant="destructive">Eliminado</Badge>
                           ) : !member.activo ? (
-                            <Badge variant="secondary">Inactiva</Badge>
+                            <Badge variant="secondary">Inactivo</Badge>
                           ) : (
-                            <Badge variant="success">Activa</Badge>
+                            <Badge variant="success">Activo</Badge>
                           )}
                         </span>
                         <span className="text-right font-mono text-sm">

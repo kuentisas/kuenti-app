@@ -137,11 +137,11 @@ export default async function UsuariosPage() {
                     </TableCell>
                     <TableCell>
                       {u.deleted_at ? (
-                        <Badge variant="destructive">Eliminada</Badge>
+                        <Badge variant="destructive">Eliminado</Badge>
                       ) : u.activo ? (
-                        <Badge variant="success">Activa</Badge>
+                        <Badge variant="success">Activo</Badge>
                       ) : (
-                        <Badge variant="secondary">Inactiva</Badge>
+                        <Badge variant="secondary">Inactivo</Badge>
                       )}
                     </TableCell>
                     {canSeeSalario && (

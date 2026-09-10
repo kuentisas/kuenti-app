@@ -56,7 +56,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const colaboradoraId = searchParams.get("colaboradora");
   if (!colaboradoraId) {
-    return new Response("Falta el parámetro colaboradora", { status: 400 });
+    return new Response("Falta el identificador del miembro del equipo", { status: 400 });
   }
   const mesStr = searchParams.get("mes") ?? bogotaMonthKey();
 
