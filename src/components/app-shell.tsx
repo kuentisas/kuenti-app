@@ -14,6 +14,7 @@ import {
   CalendarRange,
   CalendarDays,
   History,
+  ClipboardList,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -39,6 +40,7 @@ const ADMIN_NAV: NavItem[] = [
   { href: "/admin/aprobaciones", label: "Aprobaciones", mobileLabel: "Aprob.", icon: History },
   { href: "/admin/clientes", label: "Clientes", icon: Building2 },
   { href: "/admin/usuarios", label: "Equipo", icon: Users },
+  { href: "/admin/asignaciones", label: "Asignaciones", mobileLabel: "Asign.", icon: ClipboardList },
 ];
 
 // Igual que ADMIN_NAV, sin Rentabilidad — expone tarifas/salarios, que
