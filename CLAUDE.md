@@ -96,6 +96,14 @@ Gotcha de CSS a tener en cuenta: por default, un ítem flex/grid no se encoge po
 
 Los ítems de la barra inferior usan `mobileLabel` (opcional, en `NavItem`) cuando la etiqueta completa no entra en 375px sin superponerse a la del vecino (son palabras sueltas, no hacen wrap) — el sidebar de escritorio siempre usa `label` completo.
 
+### Terminología neutra en género — regla para todo texto visible al usuario
+
+Toda la terminología visible al usuario debe ser neutra en género: usar **"miembro del equipo"** en vez de "colaborador"/"colaboradora", y adjetivos en **masculino no marcado** para estados ("Activo"/"Inactivo"/"Eliminado", nunca "Activa"/"Inactiva"/"Eliminada"). No todo el equipo son mujeres.
+
+Esto aplica a **cualquier funcionalidad nueva que se construya de aquí en adelante** — texto de UI (labels, headers, botones), toasts, diálogos de confirmación, exports a Excel, y mensajes de error de server actions y de RPCs/triggers de Postgres (`RAISE EXCEPTION`) que puedan llegar sin traducir a un toast. No aplica a identificadores internos (nombres de función/variable/prop/tipo, el valor del enum de rol `role = "colaboradora"` en sí, query params, comentarios de código) — esos no los ve el usuario y no hace falta tocarlos.
+
+Barrido histórico hecho el 2026-09-10 (migración `0028` + cambios en `asignaciones-view.tsx`, `usuarios/actions.ts`, `usuarios/page.tsx`, `reportes/page.tsx`, `assignment-editor.tsx`, `calendario/export/route.ts`) — ver sección de Asignaciones abajo para el detalle de esa corrida. Si aparece código viejo que no se ajuste a esta regla, es deuda pendiente de ese barrido (se puede haber escapado algo), no una excepción intencional.
+
 ### Asignaciones (`client_assignments`) — vista consolidada y desasignación masiva
 
 `/admin/asignaciones` (admin y supervisor, ambos de solo lectura) muestra de un vistazo todas las filas de `client_assignments`, con toggle "Por cliente" / "Por colaboradora" (`Tabs` de shadcn) y badge "Sin asignar" para clientes sin ninguna colaboradora — se agregó porque antes había que entrar cliente por cliente para ver el estado de las asignaciones, algo que se volvió tedioso en un cambio operativo grande del equipo.
