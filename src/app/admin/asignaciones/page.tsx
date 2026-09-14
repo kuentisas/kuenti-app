@@ -14,10 +14,11 @@ export default async function AsignacionesPage() {
       supabase
         .from("client_assignments")
         .select("client_id, user_id, clients(nombre), users(nombre)"),
+      // Cualquier rol puede tener client_assignments — admin y supervisor
+      // también operan como un miembro más, sin tratamiento especial.
       supabase
         .from("users")
         .select("id, nombre")
-        .eq("role", "colaboradora")
         .eq("activo", true)
         .is("deleted_at", null)
         .order("nombre"),

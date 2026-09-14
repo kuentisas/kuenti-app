@@ -95,11 +95,9 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (path.startsWith("/panel") && profile.role !== "colaboradora") {
-    const url = request.nextUrl.clone();
-    url.pathname = "/admin";
-    return NextResponse.redirect(url);
-  }
+  // /panel (timer, "Mis clientes") es accesible a los 3 roles: admin y
+  // supervisor también pueden operar como un miembro del equipo más
+  // (Start/Stop, clientes asignados) — no es exclusivo de colaboradora.
 
   return response;
 }

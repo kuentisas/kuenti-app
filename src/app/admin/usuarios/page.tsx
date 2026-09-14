@@ -76,9 +76,10 @@ export default async function UsuariosPage() {
     clientsByUser.set(a.user_id, list);
   }
 
-  const allColaboradoras = users.filter(
-    (u) => u.role === "colaboradora" && u.activo && !u.deleted_at
-  );
+  // Cualquier miembro activo es un destino/origen válido de reasignación —
+  // admin y supervisor ahora también pueden tener client_assignments, sin
+  // tratamiento especial.
+  const allColaboradoras = users.filter((u) => u.activo && !u.deleted_at);
 
   return (
     <div className="space-y-6">
@@ -146,46 +147,42 @@ export default async function UsuariosPage() {
                     </TableCell>
                     {canSeeSalario && (
                       <TableCell className="text-right">
-                        {u.role === "colaboradora" ? (
-                          <div className="flex flex-col items-end gap-0.5">
-                            <div className="flex items-center justify-end gap-1">
-                              <span className="font-mono text-sm">
-                                {u.salario_mensual != null ? formatCOP(u.salario_mensual) : "—"}
-                              </span>
-                              {!u.deleted_at && (
-                                <SalaryDialog
-                                  userId={u.id}
-                                  nombre={u.nombre}
-                                  currentSalary={u.salario_mensual}
-                                />
-                              )}
-                              <SalaryHistoryDialog
+                        <div className="flex flex-col items-end gap-0.5">
+                          <div className="flex items-center justify-end gap-1">
+                            <span className="font-mono text-sm">
+                              {u.salario_mensual != null ? formatCOP(u.salario_mensual) : "—"}
+                            </span>
+                            {!u.deleted_at && (
+                              <SalaryDialog
                                 userId={u.id}
                                 nombre={u.nombre}
-                                historial={(u.salarioHistorial ?? []).map((h) => ({
-                                  id: h.id,
-                                  valor: h.salario_mensual,
-                                  vigente_desde: h.vigente_desde,
-                                  es_correccion: h.es_correccion,
-                                }))}
-                                isAdmin={isAdminReal}
+                                currentSalary={u.salario_mensual}
                               />
-                            </div>
-                            {u.salario_mensual != null && !u.salarioVigente && u.salarioVigenteDesde && (
-                              <span className="text-xs text-muted-foreground">
-                                vigente desde {formatMesVigencia(u.salarioVigenteDesde)}
-                              </span>
                             )}
+                            <SalaryHistoryDialog
+                              userId={u.id}
+                              nombre={u.nombre}
+                              historial={(u.salarioHistorial ?? []).map((h) => ({
+                                id: h.id,
+                                valor: h.salario_mensual,
+                                vigente_desde: h.vigente_desde,
+                                es_correccion: h.es_correccion,
+                              }))}
+                              isAdmin={isAdminReal}
+                            />
                           </div>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
+                          {u.salario_mensual != null && !u.salarioVigente && u.salarioVigenteDesde && (
+                            <span className="text-xs text-muted-foreground">
+                              vigente desde {formatMesVigencia(u.salarioVigenteDesde)}
+                            </span>
+                          )}
+                        </div>
                       </TableCell>
                     )}
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
                         {clientCount}
-                        {u.role === "colaboradora" && !u.deleted_at && (
+                        {!u.deleted_at && (
                           <ReassignDialog
                             fromUserId={u.id}
                             fromUserNombre={u.nombre}
@@ -200,7 +197,13 @@ export default async function UsuariosPage() {
                         {!u.deleted_at &&
                           (callerRole === "admin" ||
                             (callerRole === "supervisor" && u.role === "colaboradora")) && (
-                            <EditMemberDialog userId={u.id} nombre={u.nombre} email={u.email} />
+                            <EditMemberDialog
+                              userId={u.id}
+                              nombre={u.nombre}
+                              email={u.email}
+                              role={u.role}
+                              canEditRole={callerRole === "admin" && u.role !== "admin"}
+                            />
                           )}
                         {!u.deleted_at && (
                           <ResetPasswordDialog userId={u.id} nombre={u.nombre} />

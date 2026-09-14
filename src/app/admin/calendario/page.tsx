@@ -25,10 +25,11 @@ export default async function AdminCalendarioPage({
 }) {
   const supabase = createClient();
 
+  // Cualquier rol puede aparecer acá — admin y supervisor también operan
+  // como un miembro más y pueden tener horas registradas.
   const { data: colaboradoras } = await supabase
     .from("users")
     .select("id, nombre")
-    .eq("role", "colaboradora")
     .eq("activo", true)
     .is("deleted_at", null)
     .order("nombre");

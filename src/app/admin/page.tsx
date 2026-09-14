@@ -140,10 +140,11 @@ export default async function AdminDashboardPage({
 
   const autoClosed = (autoClosedRaw ?? []) as unknown as AutoClosedRow[];
 
+  // Cualquier rol puede tener ajustes manuales — admin y supervisor
+  // también operan como un miembro más.
   const { data: colaboradorasParaFiltro } = await supabase
     .from("users")
     .select("id, nombre")
-    .eq("role", "colaboradora")
     .eq("activo", true)
     .is("deleted_at", null)
     .order("nombre");

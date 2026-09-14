@@ -85,6 +85,7 @@ const updateProfileSchema = z.object({
   userId: z.string().uuid(),
   nombre: z.string().trim().min(1, "El nombre es requerido"),
   email: z.string().trim().email("Correo inválido"),
+  role: z.enum(["colaboradora", "supervisor"]).optional(),
 });
 
 // Nombre y correo editables directamente porque esta app nunca dependió
@@ -100,26 +101,54 @@ const updateProfileSchema = z.object({
 // que no pueda cambiarle el correo de login a una cuenta con más
 // privilegios y luego pedir un reset de contraseña a un correo que él
 // controla.
-export async function updateTeamMemberProfile(userId: string, nombre: string, email: string) {
+//
+// `role` es opcional y exclusivo admin: permite mover a alguien entre
+// colaboradora y supervisor. Nunca acepta "admin" (ni como valor nuevo
+// ni como target) — el zod enum ya lo excluye, y el trigger
+// prevent_role_change_by_non_admin (0029) lo bloquea igual aunque este
+// chequeo se saltara. El UPDATE sigue yendo por el cliente de sesión
+// (nunca adminClient) para que is_admin()/el trigger evalúen auth.uid()
+// real, igual que ya pasaba con nombre/email.
+export async function updateTeamMemberProfile(
+  userId: string,
+  nombre: string,
+  email: string,
+  role?: "colaboradora" | "supervisor"
+) {
   const guard = await requireRole(["admin", "supervisor"]);
   if ("error" in guard) return guard;
 
-  const parsed = updateProfileSchema.safeParse({ userId, nombre, email });
+  const parsed = updateProfileSchema.safeParse({ userId, nombre, email, role });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Datos inválidos" };
   }
 
   const supabase = createClient();
 
+  const { data: target } = await supabase
+    .from("users")
+    .select("role")
+    .eq("id", parsed.data.userId)
+    .maybeSingle();
+  if (!target) {
+    return { error: "El usuario ya no existe." };
+  }
+
   if (guard.profile.role === "supervisor") {
-    const { data: target } = await supabase
-      .from("users")
-      .select("role")
-      .eq("id", parsed.data.userId)
-      .maybeSingle();
-    if (!target || target.role !== "colaboradora") {
+    if (target.role !== "colaboradora") {
       return { error: "Un supervisor solo puede editar miembros del equipo." };
     }
+    if (parsed.data.role) {
+      return { error: "Un supervisor no puede cambiar el rol de un miembro del equipo." };
+    }
+  }
+
+  const roleUpdate: { role?: "colaboradora" | "supervisor" } = {};
+  if (parsed.data.role && guard.profile.role === "admin") {
+    if (target.role === "admin") {
+      return { error: "El rol de un administrador no se puede cambiar desde la aplicación." };
+    }
+    roleUpdate.role = parsed.data.role;
   }
 
   let adminClient;
@@ -142,7 +171,7 @@ export async function updateTeamMemberProfile(userId: string, nombre: string, em
   // este segundo paso quedaría desincronizada del correo real de login.
   const { data, error } = await supabase
     .from("users")
-    .update({ nombre: parsed.data.nombre, email: parsed.data.email })
+    .update({ nombre: parsed.data.nombre, email: parsed.data.email, ...roleUpdate })
     .eq("id", parsed.data.userId)
     .select()
     .maybeSingle();

@@ -1,5 +1,6 @@
 "use client";
 
+import { Fragment } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -30,9 +31,14 @@ interface NavItem {
   // sidebar de escritorio siempre usa `label` completo.
   mobileLabel?: string;
   icon: React.ComponentType<{ className?: string }>;
+  // Renderiza un divisor después de este ítem en el sidebar de escritorio
+  // — separa visualmente "Mi tiempo" (admin/supervisor operando como un
+  // miembro más) del resto de las secciones de gestión.
+  separatorAfter?: boolean;
 }
 
 const ADMIN_NAV: NavItem[] = [
+  { href: "/panel", label: "Mi tiempo", icon: Clock, separatorAfter: true },
   { href: "/admin", label: "Dashboard", mobileLabel: "Inicio", icon: LayoutDashboard },
   { href: "/admin/reportes", label: "Reportes", icon: BarChart3 },
   { href: "/admin/rentabilidad", label: "Rentabilidad", mobileLabel: "Rentab.", icon: TrendingUp },
@@ -88,19 +94,21 @@ export function AppShell({
                 ? pathname === item.href
                 : pathname.startsWith(item.href);
             return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                  active
-                    ? "bg-kuenti-slate text-white"
-                    : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-                )}
-              >
-                <item.icon className="h-4 w-4" />
-                {item.label}
-              </Link>
+              <Fragment key={item.href}>
+                <Link
+                  href={item.href}
+                  className={cn(
+                    "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                    active
+                      ? "bg-kuenti-slate text-white"
+                      : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  )}
+                >
+                  <item.icon className="h-4 w-4" />
+                  {item.label}
+                </Link>
+                {item.separatorAfter && <div className="my-2 border-t" />}
+              </Fragment>
             );
           })}
         </nav>

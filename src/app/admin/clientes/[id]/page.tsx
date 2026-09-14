@@ -66,10 +66,11 @@ export default async function ClientDetailPage({
         .from("client_assignments")
         .select("user_id")
         .eq("client_id", params.id),
+      // Cualquier rol es asignable a un cliente — admin y supervisor
+      // también operan como un miembro más, sin tratamiento especial.
       supabase
         .from("users")
         .select("id, nombre, activo")
-        .eq("role", "colaboradora")
         .is("deleted_at", null)
         .order("nombre"),
     ]);
