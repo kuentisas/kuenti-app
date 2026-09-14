@@ -57,6 +57,14 @@ La regla vive en el trigger `prevent_role_change_by_non_admin` (relajado en `002
 
 Confirmado con datos temporales reales que el cambio de rol aplica de inmediato en la siguiente request de la persona afectada, sin necesidad de cerrar sesión — ni `getCurrentUserProfile()` ni `is_admin()`/`is_admin_or_supervisor()` cachean el rol entre requests, todos resuelven `auth.uid()` contra `public.users` en el momento.
 
+### Auto-aprobación de correcciones (`approve_correction`/`reject_correction`) — migración `0030`
+
+Gap real encontrado tras `0029`: como admin/supervisor ahora pueden generar sus propias `activity_corrections`, y `approve_correction()`/`reject_correction()` solo validaban `is_admin_or_supervisor()` (nunca comparaban `activity_corrections.user_id` contra `auth.uid()`), cualquiera de los dos roles podía aprobarse su propia solicitud sin que nadie más interviniera.
+
+Decisión de producto: **admin sí puede auto-aprobarse** (visible en el historial de `/admin/aprobaciones` igual que cualquier otra aprobación, sin tratamiento especial ni oculto) — como el rol admin es exclusivamente manual en la base, siempre existe al menos uno, así que nunca puede quedar atascado. **Supervisor nunca puede aprobar ni rechazar su propia solicitud** — necesita otro supervisor o el admin. Migración `0030` agrega el chequeo en ambas funciones, justo después de confirmar que la corrección existe: `if not is_admin() and v_corr.user_id = auth.uid() then raise ...` (con `is_admin()`, no `is_admin_or_supervisor()`, a propósito — admin queda exento). No se tocó RLS (`activity_corrections` sigue sin policy de UPDATE, por diseño) ni la UI — el mensaje de error del RPC llega tal cual al toast, sin necesidad de ocultar el botón para un supervisor mirando su propia solicitud.
+
+Al momento de escribir esto (2026-09-14) hay 1 solo admin y 0 supervisores en producción — si se promueve a alguien a supervisor, esa persona seguirá teniendo siempre al admin disponible para resolver sus propias correcciones (nunca queda sin nadie que pueda aprobar).
+
 ### Zona horaria — Bogotá fija (UTC-5, sin DST)
 
 El servidor (Vercel) y Postgres corren en UTC; la app entera opera en hora de Bogotá. Ya hubo bugs reales por esta discrepancia (actividades eventuales desapareciendo horas antes de medianoche real de Bogotá).
