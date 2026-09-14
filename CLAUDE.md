@@ -26,16 +26,36 @@ Kuenti: control de horas para una firma de servicios contables/administrativos e
 ### Roles y autorización — tres capas independientes
 
 Tres roles en `users.role`: `admin`, `supervisor`, `colaboradora`.
-- **admin**: todo, incluido lo financiero (`client_rate_history`, `user_salary_history`, `app_settings`) y eliminar usuarios/cambiar roles.
+- **admin**: todo, incluido lo financiero (`client_rate_history`, `user_salary_history`, `app_settings`) y eliminar usuarios/cambiar roles (colaboradora↔supervisor — nunca hacia/desde admin, ver más abajo).
 - **supervisor**: "admin operativo sin visibilidad financiera" — gestiona clientes, actividades, aprobaciones y equipo, pero **nunca** se agrega a las policies financieras (siguen exclusivas de `is_admin()`), y no puede eliminar usuarios ni cambiar el rol de nadie (ni el propio).
 - **colaboradora**: solo lo suyo — sus clientes asignados, sus `time_entries`.
+
+Desde la migración `0029` (2026-09-14), **admin y supervisor no son exclusivamente "gestión"**: también pueden operar como un miembro del equipo más (clientes asignados, timer, horas que cuentan en reportes/rentabilidad), sin tratamiento especial — ver la sección dedicada más abajo.
 
 Autorización en 3 capas, cada una independiente de las otras (verificado explícitamente con pruebas de escalamiento de privilegios):
 1. **RLS en Postgres** — la capa real. `is_admin()` vs `is_admin_or_supervisor()` son funciones SQL separadas a propósito; nunca mezclar.
 2. **`requireRole()`** (`src/lib/require-role.ts`) — obligatorio en cualquier server action que use el cliente `service_role` (bypasea RLS por completo), porque ahí la única defensa vive en el código de la action.
 3. **Middleware** (`src/middleware.ts`) — redirige por rol a `/admin` o `/panel`. Es UX, no seguridad; no confiar en él para proteger datos.
 
-Defensa en profundidad explícita: el trigger `prevent_role_change_by_non_admin` en `users` bloquea cualquier cambio de rol que no venga de un admin, **incluso si la policy RLS de UPDATE ya lo permitiría** (un supervisor pasa esa policy pero el trigger lo frena igual).
+Defensa en profundidad explícita: el trigger `prevent_role_change_by_non_admin` en `users` bloquea cualquier cambio de rol que no venga de un admin, **incluso si la policy RLS de UPDATE ya lo permitiría** (un supervisor pasa esa policy pero el trigger lo frena igual). Desde `0029` el trigger además bloquea *siempre* — incluso para admin — cualquier cambio que toque el rol `admin` en cualquiera de los dos lados; solo permite que un admin mueva a alguien entre `colaboradora` y `supervisor` (ver sección dedicada más abajo).
+
+### Admin y supervisor operando como miembro del equipo (migración `0029`)
+
+Cambio de arquitectura pedido por la gerente por una reorganización operativa real (2026-09-14): admin y supervisor ya no son exclusivamente "gestión" — también pueden operar como un miembro del equipo más, sin tratamiento especial:
+
+- Pueden tener `client_assignments` propios, exactamente igual que cualquier miembro (misma tabla, mismas RLS policies de `0021_supervisor_role.sql`, sin columna/constraint que dependa de `role` — no hizo falta tocar RLS para esto).
+- Acceden a `/panel` (Start/Stop, mismo timer, misma pantalla que usa colaboradora — no hay una pantalla separada) vía un link "Mi tiempo" en su propio menú (`app-shell.tsx`), primero en la lista y separado con un divisor visual del resto de las secciones de gestión. El middleware ya no bloquea `/panel` para admin/supervisor; `panel/layout.tsx` les pasa su rol real a `AppShell` (ya no el `"colaboradora"` hardcodeado de antes), así que ven su propio sidebar de gestión mientras están en `/panel`, no el de colaboradora.
+- `start_activity()` (redefinida en `0029`) ya **no** tiene el bypass de `is_admin()` que tenía antes — de aquí en más, admin también necesita estar en `client_assignments` para iniciar timer en un cliente, igual que supervisor y colaboradora. Antes de esta migración admin podía iniciar timer en cualquier cliente sin estar asignado, pero nadie lo usaba en la práctica porque `/panel` estaba bloqueado para ese rol.
+- Sus horas cuentan igual que las de cualquier miembro: Rentabilidad (`salario_mensual` vía `user_salary_history`, con el mismo fallback a `costo_hora_promedio`) y el reporte "Por miembro del equipo" (`reportes/page.tsx` + `breakdown.ts`) nunca filtraron por `role` — el único motivo por el que antes no aparecían ahí es que no podían generar `time_entries`/`client_assignments`. No hizo falta tocar ninguno de los dos cálculos.
+- Aparecen en todos los selectores de "miembro del equipo" (Calendario, Asignaciones, filtro de ajustes manuales del dashboard, asignación por cliente, reasignación en Equipo) — se quitó el `.eq("role", "colaboradora")` que los excluía en cada uno de esos queries.
+
+### Cambio de rol entre colaboradora y supervisor (exclusivo admin, migración `0029`)
+
+Desde "Editar miembro" (`usuarios/edit-member-dialog.tsx`), un admin puede mover a alguien entre `colaboradora` y `supervisor` en cualquier dirección — el selector de rol solo se muestra si quien edita es admin, y nunca para una fila cuyo rol actual es `admin`. El rol `admin` sigue siendo **exclusivamente manual en la base** — ningún camino de la UI puede promover a alguien a admin ni degradar a un admin a otro rol, ni siquiera otro admin.
+
+La regla vive en el trigger `prevent_role_change_by_non_admin` (relajado en `0029`, reemplazando la versión de `0021_supervisor_role.sql` que bloqueaba cualquier cambio de rol sin excepción): bloquea siempre cualquier cambio que involucre el rol `admin` en cualquiera de los dos lados (`old.role = 'admin' or new.role = 'admin'`), y para el resto (`colaboradora ↔ supervisor`) exige `is_admin()`. `updateTeamMemberProfile` (`usuarios/actions.ts`) valida lo mismo en el server (supervisor nunca puede mandar `role`, target `admin` rechazado) antes de llegar al trigger, pero el trigger sigue siendo la barrera real — mismo criterio de defensa en profundidad que ya existía.
+
+Confirmado con datos temporales reales que el cambio de rol aplica de inmediato en la siguiente request de la persona afectada, sin necesidad de cerrar sesión — ni `getCurrentUserProfile()` ni `is_admin()`/`is_admin_or_supervisor()` cachean el rol entre requests, todos resuelven `auth.uid()` contra `public.users` en el momento.
 
 ### Zona horaria — Bogotá fija (UTC-5, sin DST)
 
@@ -135,6 +155,8 @@ Si una tarea futura toca WhatsApp, Chatwoot, el dominio kuenti.co, o el correo c
 **En curso:** carga de clientes y actividades reales a producción (la base de prueba ya se limpió por completo — solo queda el admin real, más los clientes/equipo reales que se vayan cargando).
 
 **Actualización 2026-09-10:** la carga de clientes/equipo reales ya está en marcha en serio — a la fecha hay ~28 asignaciones cliente↔colaboradora reales en `client_assignments`. Se agregó `/admin/asignaciones` (vista "quién tiene qué cliente", por cliente o por colaboradora, con badge "Sin asignar") y la acción admin-only "Desasignar todos los clientes" para reorganizaciones grandes del equipo — ver sección de diseño arriba.
+
+**Actualización 2026-09-14:** cambio de arquitectura pedido por la gerente (reorganización operativa real) — admin y supervisor ahora pueden operar también como un miembro del equipo más (clientes asignados, Start/Stop en `/panel` vía el link "Mi tiempo", horas que cuentan en reportes/rentabilidad igual que cualquiera), y un admin puede mover a alguien entre `colaboradora` y `supervisor` desde "Editar miembro" (nunca hacia/desde `admin`, que sigue siendo exclusivamente manual en la base). Migración `0029`. Ver las dos secciones de diseño dedicadas arriba. Verificado end-to-end con datos temporales reales contra Supabase y visualmente en el navegador.
 
 **Pendiente / decisiones de producto sin resolver todavía:**
 - Modo offline completo (cola de sincronización real) — ver sección de arriba. No construir sin que el equipo confirme que es un problema recurrente en la práctica.
